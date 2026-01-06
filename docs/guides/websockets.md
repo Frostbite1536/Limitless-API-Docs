@@ -336,16 +336,24 @@ ws.subscribe(
 
 ### Client Events (emit)
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `subscribe_market_prices` | `{ marketAddresses?: string[], marketSlugs?: string[] }` | Subscribe to market updates |
+| Event | Payload | Auth Required | Description |
+|-------|---------|---------------|-------------|
+| `subscribe_market_prices` | `{ marketAddresses?: string[], marketSlugs?: string[] }` | No | Subscribe to price/orderbook updates |
+| `subscribe_positions` | `{ marketAddresses: string[] }` | Yes | Subscribe to position updates |
+| `authenticate` | `Bearer {session_cookie}` | Yes | Authenticate WebSocket connection |
 
 ### Server Events (on)
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `newPriceData` | PriceData object | AMM price update |
-| `orderbookUpdate` | OrderbookData object | CLOB orderbook update |
+| Event | Auth Required | Description |
+|-------|---------------|-------------|
+| `connect` | No | Connection established |
+| `disconnect` | No | Connection lost |
+| `newPriceData` | No | AMM market price update |
+| `orderbookUpdate` | No | CLOB orderbook update |
+| `positions` | Yes | Position balance update |
+| `authenticated` | Yes | Authentication confirmation |
+| `system` | No | System notifications |
+| `exception` | No | Error notifications |
 
 ## Best Practices
 

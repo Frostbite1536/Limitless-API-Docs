@@ -70,6 +70,8 @@ interface CreateOrderDto {
 | `GTC` | Good Till Cancelled | Stays open until filled or cancelled |
 | `FOK` | Fill Or Kill | Must fill completely or fails |
 
+**FOK Order Semantics**: For FOK market orders, set `takerAmount: '1'` to indicate market order semantics where the amount is derived from `makerAmount`.
+
 ---
 
 ## OrderResponseDto

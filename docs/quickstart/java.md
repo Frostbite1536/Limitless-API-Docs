@@ -54,11 +54,13 @@ import java.util.*;
 public class LimitlessTrader {
 
     private static final String API_URL = "https://api.limitless.exchange";
-    private static final String CLOB_CTF_ADDRESS = "0xa4409D988CA2218d956BeEFD3874100F444f0DC3";
     private static final int CHAIN_ID = 8453;  // Base mainnet
 
     private static final OkHttpClient client = new OkHttpClient();
     private static final ObjectMapper mapper = new ObjectMapper();
+
+    // Cache for market data (venue is static per market)
+    private static final Map<String, JsonNode> marketCache = new HashMap<>();
 
     // ========== Authentication ==========
 
@@ -142,14 +144,26 @@ public class LimitlessTrader {
     // ========== Market Data ==========
 
     public static JsonNode getMarket(String slug) throws IOException {
+        // Check cache first (venue data is static per market)
+        if (marketCache.containsKey(slug)) {
+            return marketCache.get(slug);
+        }
+
         Request request = new Request.Builder()
             .url(API_URL + "/markets/" + slug)
             .get()
             .build();
 
         try (Response response = client.newCall(request).execute()) {
-            return mapper.readTree(response.body().string());
+            JsonNode market = mapper.readTree(response.body().string());
+            marketCache.put(slug, market);  // Cache for future use
+            return market;
         }
+    }
+
+    public static String getVenueExchange(String slug) throws IOException {
+        JsonNode market = getMarket(slug);
+        return market.get("venue").get("exchange").asText();
     }
 
     public static JsonNode getOrderbook(String slug) throws IOException {
@@ -165,13 +179,17 @@ public class LimitlessTrader {
 
     // ========== EIP-712 Signing ==========
 
-    public static String signOrder(String privateKey, Map<String, Object> order)
+    /**
+     * Sign order using EIP-712 with venue's exchange address.
+     * IMPORTANT: venueExchange must be fetched from market data via getVenueExchange(slug)
+     */
+    public static String signOrder(String privateKey, Map<String, Object> order, String venueExchange)
         throws Exception {
 
         Credentials credentials = Credentials.create(privateKey);
 
         // Build EIP-712 typed data hash
-        byte[] domainSeparator = buildDomainSeparator();
+        byte[] domainSeparator = buildDomainSeparator(venueExchange);
         byte[] structHash = buildOrderStructHash(order);
 
         // Final hash: keccak256("\x19\x01" + domainSeparator + structHash)
@@ -196,7 +214,11 @@ public class LimitlessTrader {
         return "0x" + Numeric.toHexStringNoPrefix(signature);
     }
 
-    private static byte[] buildDomainSeparator() {
+    /**
+     * Build EIP-712 domain separator using venue's exchange address.
+     * @param venueExchange The exchange address from market.venue.exchange
+     */
+    private static byte[] buildDomainSeparator(String venueExchange) {
         // EIP-712 domain separator
         byte[] typeHash = Hash.sha3(
             "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
@@ -215,8 +237,9 @@ public class LimitlessTrader {
         byte[] chainId = Numeric.toBytesPadded(BigInteger.valueOf(CHAIN_ID), 32);
         System.arraycopy(chainId, 0, encoded, 96, 32);
 
+        // Use venue exchange address (from market data)
         byte[] contract = Numeric.hexStringToByteArray(
-            Numeric.cleanHexPrefix(CLOB_CTF_ADDRESS)
+            Numeric.cleanHexPrefix(venueExchange)
         );
         byte[] contractPadded = new byte[32];
         System.arraycopy(contract, 0, contractPadded, 12, 20);
@@ -322,10 +345,16 @@ public class LimitlessTrader {
         String makerAddress = auth.userData.get("account").asText();
         int ownerId = auth.userData.get("id").asInt();
 
-        // 2. Get market data
+        // 2. Get market data (cached per market)
         System.out.println("Fetching market: " + marketSlug);
         JsonNode market = getMarket(marketSlug);
-        JsonNode positionIds = market.get("position_ids");
+
+        // Get venue exchange for EIP-712 signing (CRITICAL)
+        String venueExchange = market.get("venue").get("exchange").asText();
+        System.out.println("Using venue exchange: " + venueExchange);
+
+        // Get token ID (positionIds[0] = YES, positionIds[1] = NO)
+        JsonNode positionIds = market.get("positionIds");
         String tokenId = tokenType.equals("YES")
             ? positionIds.get(0).asText()
             : positionIds.get(1).asText();
@@ -356,8 +385,8 @@ public class LimitlessTrader {
         order.put("side", 0);  // BUY
         order.put("signatureType", 0);
 
-        // 5. Sign order
-        String signature = signOrder(privateKey, order);
+        // 5. Sign order using venue's exchange address
+        String signature = signOrder(privateKey, order, venueExchange);
         order.put("signature", signature);
         order.put("price", priceInDollars);
 

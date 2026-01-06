@@ -57,25 +57,40 @@ def authenticate(private_key):
 
 ## Step 2: Get Market Data
 
-Fetch market details to get position IDs.
+Fetch market details to get position IDs and venue information.
 
 ```python
+# Cache for market data (venue is static per market)
+MARKET_CACHE = {}
+
 def get_market(slug):
+    if slug in MARKET_CACHE:
+        return MARKET_CACHE[slug]
+
     response = requests.get(f"{API_URL}/markets/{slug}")
-    return response.json()
+    market = response.json()
+    MARKET_CACHE[slug] = market
+    return market
 
 market = get_market("btc-100k-2024")
 
-# Extract position IDs
-position_ids = market['position_ids']
+# Get venue exchange for EIP-712 signing (CRITICAL)
+venue_exchange = market['venue']['exchange']
+
+# Extract position IDs (positionIds[0] = YES, positionIds[1] = NO)
+position_ids = market['positionIds']
 yes_token_id = position_ids[0]
 no_token_id = position_ids[1]
 ```
 
 **Key Fields**:
-- `position_ids[0]` - YES token ID
-- `position_ids[1]` - NO token ID
+- `positionIds[0]` - YES token ID
+- `positionIds[1]` - NO token ID
+- `venue.exchange` - Use as `verifyingContract` in EIP-712 signing
+- `venue.adapter` - Needed for SELL orders on NegRisk markets
 - `slug` - Market identifier
+
+**IMPORTANT**: Cache market data per slug - venue info is static and doesn't change.
 
 ## Step 3: Calculate Amounts
 
@@ -175,22 +190,28 @@ def create_order_payload(maker, token_id, maker_amount, taker_amount, side=0):
 
 ## Step 5: Sign Order (EIP-712)
 
-Sign the order using EIP-712 typed data.
+Sign the order using EIP-712 typed data with the **venue's exchange address**.
 
 ```python
 from eth_account.messages import encode_typed_data
 
-CLOB_CTF_ADDRESS = "0xa4409D988CA2218d956BeEFD3874100F444f0DC3"
 CHAIN_ID = 8453
 
-def sign_order(private_key, order_payload):
+def sign_order(private_key, order_payload, venue_exchange):
+    """
+    Sign order using EIP-712 with venue's exchange address.
+
+    IMPORTANT: venue_exchange must be fetched from market data via:
+    venue_exchange = market['venue']['exchange']
+    """
     account = Account.from_key(private_key)
 
+    # Use venue.exchange from market data as verifyingContract
     domain = {
         "name": "Limitless CTF Exchange",
         "version": "1",
         "chainId": CHAIN_ID,
-        "verifyingContract": CLOB_CTF_ADDRESS
+        "verifyingContract": venue_exchange  # From market's venue data
     }
 
     types = {
@@ -216,14 +237,17 @@ def sign_order(private_key, order_payload):
     return '0x' + signed.signature.hex()
 ```
 
-### Contract Addresses
+### Venue System (CRITICAL)
 
-| Market Type | Contract |
-|-------------|----------|
-| CLOB | `0xa4409D988CA2218d956BeEFD3874100F444f0DC3` |
-| NegRisk | `0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6` |
+Each CLOB market has a `venue` object with contract addresses. You **must** fetch this from market data:
 
-Use the appropriate contract address based on market type.
+```python
+market = get_market("btc-100k-2024")
+venue_exchange = market['venue']['exchange']  # Use as verifyingContract
+venue_adapter = market['venue']['adapter']    # For NegRisk SELL orders
+```
+
+**Do NOT hardcode contract addresses** - always fetch them from the market's venue data.
 
 ## Step 6: Submit Order
 
@@ -292,9 +316,14 @@ def place_order(market_slug, token_type, price_cents, shares):
     owner_id = user['id']
     maker = user['account']
 
-    # Step 2: Get market data
+    # Step 2: Get market data (cached per market)
     market = get_market(market_slug)
-    token_id = market['position_ids'][0 if token_type == "YES" else 1]
+
+    # Get venue exchange for EIP-712 signing (CRITICAL)
+    venue_exchange = market['venue']['exchange']
+
+    # Get token ID (positionIds[0] = YES, positionIds[1] = NO)
+    token_id = market['positionIds'][0 if token_type == "YES" else 1]
 
     # Step 3: Calculate amounts
     maker_amount, taker_amount = calculate_amounts(price_cents, shares)
@@ -302,8 +331,8 @@ def place_order(market_slug, token_type, price_cents, shares):
     # Step 4: Create order
     order = create_order_payload(maker, token_id, maker_amount, taker_amount)
 
-    # Step 5: Sign order
-    signature = sign_order(private_key, order)
+    # Step 5: Sign order using venue's exchange address
+    signature = sign_order(private_key, order, venue_exchange)
     order['signature'] = signature
     order['price'] = price_cents / 100  # Required for GTC
 
@@ -326,9 +355,10 @@ print(f"Order ID: {result['order']['orderId']}")
 
 ### Signature Verification Failed
 
-- Verify contract address matches market type
+- Verify you're using `venue.exchange` from market data (not a hardcoded address)
 - Check chain ID is 8453 (Base)
 - Ensure all fields are properly converted to strings
+- Make sure you fetched market data to get the correct venue
 
 ### Order Not Found
 

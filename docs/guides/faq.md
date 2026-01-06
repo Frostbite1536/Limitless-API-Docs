@@ -66,8 +66,8 @@ taker_amount = int(shares * scaling_factor)  # 100000000
 ### What is the tokenId in orders?
 
 The `tokenId` is the position ID for the outcome you're trading:
-- For YES tokens: Use `position_ids[0]` from market data
-- For NO tokens: Use `position_ids[1]` from market data
+- For YES tokens: Use `positionIds[0]` from market data
+- For NO tokens: Use `positionIds[1]` from market data
 
 ### Why did my order fail?
 
@@ -179,10 +179,15 @@ Base mainnet (Chain ID: 8453)
 
 ### What are the contract addresses?
 
-| Contract | Address |
-|----------|---------|
-| CLOB CTF Exchange | `0xa4409D988CA2218d956BeEFD3874100F444f0DC3` |
-| NegRisk CTF Exchange | `0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6` |
+**Do NOT hardcode contract addresses.** Each market has its own venue with contract addresses. Fetch them from market data:
+
+```python
+market = get_market("btc-100k-2024")
+venue_exchange = market['venue']['exchange']  # Use as verifyingContract in EIP-712
+venue_adapter = market['venue']['adapter']    # For NegRisk SELL orders
+```
+
+Cache venue data per market - it's static and doesn't change.
 
 ### What collateral is used?
 

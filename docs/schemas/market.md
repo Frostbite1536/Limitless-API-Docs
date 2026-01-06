@@ -20,7 +20,13 @@ interface Market {
   // Blockchain Data
   question_id: string;       // Bytes32 parsed title (66 chars)
   condition_id: string;      // Bytes32 condition ID (66 chars)
-  position_ids: string[];    // YES/NO position token IDs (max 2)
+  positionIds: string[];     // YES/NO position token IDs ([0]=YES, [1]=NO)
+
+  // Venue (CLOB markets only)
+  venue: {
+    exchange: string;        // Exchange contract (use as verifyingContract)
+    adapter: string;         // Adapter contract (for NegRisk SELL approvals)
+  };
 
   // Market State
   outcome_slot_count: 2;     // Always 2 for binary markets
@@ -40,6 +46,11 @@ interface Market {
   resolutionTxHash: string | null; // Resolution transaction
 }
 ```
+
+**Important**: The `venue` object contains contract addresses needed for order signing:
+- `venue.exchange`: Use as `verifyingContract` in EIP-712 signing
+- `venue.adapter`: Needed for SELL orders on NegRisk markets (approve CT to both)
+- Cache venue data per market - it's static and doesn't change
 
 ### MarketStatus Values
 

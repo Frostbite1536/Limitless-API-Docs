@@ -303,7 +303,17 @@ import { createSignedOrder, submitOrder } from './orders';
 import { getMarket } from './markets';
 import { connectToMarkets, subscribeToOrderbook } from './websocket';
 
-const CLOB_CTF_ADDRESS = '0xa4409D988CA2218d956BeEFD3874100F444f0DC3' as const;
+// Cache for market data (venue is static per market)
+const marketCache = new Map<string, any>();
+
+async function getMarketCached(slug: string) {
+  if (marketCache.has(slug)) {
+    return marketCache.get(slug);
+  }
+  const market = await getMarket(slug);
+  marketCache.set(slug, market);
+  return market;
+}
 
 async function main() {
   const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
@@ -321,16 +331,22 @@ async function main() {
   // 2. Create wallet client
   const wallet = createWallet(privateKey);
 
-  // 3. Get market data
+  // 3. Get market data (cached per market)
   const marketSlug = 'btc-100k-2024';
-  const market = await getMarket(marketSlug);
-  const tokenId = market.position_ids[0];  // YES token
+  const market = await getMarketCached(marketSlug);
+
+  // Get venue exchange for EIP-712 signing (CRITICAL)
+  const venueExchange = market.venue.exchange as `0x${string}`;
+  console.log('Using venue exchange:', venueExchange);
+
+  // Get token ID (positionIds[0] = YES, positionIds[1] = NO)
+  const tokenId = market.positionIds[0];
 
   // 4. Connect WebSocket for real-time updates
   const socket = connectToMarkets(session);
   subscribeToOrderbook(socket, [marketSlug]);
 
-  // 5. Create and sign order
+  // 5. Create and sign order using venue's exchange address
   console.log('Creating order...');
   const { order, signature } = await createSignedOrder(wallet, {
     amount: '65',  // $65 total
@@ -338,7 +354,7 @@ async function main() {
     tokenId,
     decimals: 6,
     chainId: 8453,
-    verifyingContract: CLOB_CTF_ADDRESS,
+    verifyingContract: venueExchange,  // From market's venue data
   });
 
   // 6. Submit order
@@ -415,9 +431,13 @@ interface Market {
   address: string;
   slug: string;
   title: string;
-  position_ids: [string, string];
+  positionIds: [string, string];  // [YES, NO] position token IDs
   status: 'FUNDED' | 'RESOLVED' | 'DISPUTED';
   deadline: string;
+  venue: {
+    exchange: string;  // Use as verifyingContract in EIP-712
+    adapter: string;   // For NegRisk SELL approvals
+  };
 }
 
 interface OrderResponse {
