@@ -7,6 +7,12 @@
 - You're using `smartWallet` and `embeddedAccount` from user data
 - Error persists despite correct `verifyingContract` in EIP-712 domain
 
+## Common Scenario
+
+**Using the Limitless frontend website even once can link your wallet to a smart wallet.** This makes the wallet unsuitable for simple EOA API trading unless you use the correct signature type.
+
+If you've ever connected your wallet to the Limitless web app, your account may have been automatically linked to a trade wallet (smart wallet + embedded account). This is a common source of confusion for developers who later try to use the same wallet for API trading.
+
 ## Root Cause
 
 When using Limitless trade wallets (smart wallet + embedded account), you have different addresses for `maker` and `signer`. This requires a **non-zero signature type**.
@@ -41,7 +47,7 @@ order = {
 }
 ```
 
-**Important**: If your account was previously used with the Limitless frontend and linked to a smart wallet, you may need to create a new account with a fresh wallet address for API trading.
+**Important**: If your wallet was ever used with the Limitless frontend, it may have been linked to a smart wallet. In this case, **create a new wallet specifically for API trading**. This is the cleanest solution and avoids signature type complexity.
 
 ### Option 2: Use correct signature type for smart wallets
 
