@@ -170,7 +170,7 @@ Contributions welcome! If you find inaccuracies in the AI-generated docs or want
 
 This documentation is for educational purposes only. The AI-generated docs in `docs/` are community-maintained and may contain errors. Always verify against the official documentation.
 
-**Limitless Labs is not responsible for any losses from trading. Always test with small amounts first.**
+**Limitless Labs does not maintain this repo. We are not responsible for any losses from trading or use of this AI-generated documentation. Always test with small amounts first.**
 
 ## Support
 
