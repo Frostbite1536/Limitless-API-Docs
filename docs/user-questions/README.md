@@ -7,6 +7,7 @@ Real questions and issues from developers using the Limitless Exchange API.
 | Issue | Description |
 |-------|-------------|
 | [Smart Wallet Signer Mismatch](smart-wallet-signer-mismatch.md) | "Signer does not match with correct address" error |
+| [Smart Wallet Signature Type](smart-wallet-signature-type.md) | Signature errors when using smart wallet with wrong signatureType |
 | [Signature Verification Failed](signature-verification-failed.md) | Order signature errors and debugging |
 | [Order Not Filling](order-not-filling.md) | Order accepted but no trade executes |
 | [Invalid Token ID](invalid-token-id.md) | Token ID or position not found errors |
@@ -19,6 +20,7 @@ Real questions and issues from developers using the Limitless Exchange API.
 |---------------|--------------|----------|
 | "Signer does not match" | Smart wallet mismatch | [See guide](smart-wallet-signer-mismatch.md) |
 | "Invalid signature" | Wrong verifyingContract | [See guide](signature-verification-failed.md) |
+| "Invalid signature" (with correct verifyingContract) | Wrong signatureType for smart wallet | [See guide](smart-wallet-signature-type.md) |
 | "Invalid token ID" | Wrong positionId | [See guide](invalid-token-id.md) |
 | "Invalid price" | Price outside 0.01-0.99 | Check your price calculation |
 
