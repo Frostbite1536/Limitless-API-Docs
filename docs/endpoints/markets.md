@@ -139,14 +139,24 @@ Returns one of three response types based on market type:
   "slug": "btc-100k-2024",
   "status": "FUNDED",
   "deadline": "2024-12-31T23:59:59Z",
-  "position_ids": ["123...", "456..."],
+  "positionIds": ["123...", "456..."],
   "condition_id": "0x...",
   "outcome_slot_count": 2,
   "winning_index": null,
   "volume": "150000000000",
-  "liquidity": "50000000000"
+  "liquidity": "50000000000",
+  "venue": {
+    "exchange": "0xA1b2C3...",
+    "adapter": "0xD4e5F6..."
+  }
 }
 ```
+
+**Important**: The `venue` object contains contract addresses needed for order signing:
+- `venue.exchange`: Use as `verifyingContract` in EIP-712 signing
+- `venue.adapter`: Needed for SELL orders on NegRisk markets (approve CT to both)
+
+Cache venue data per market - it's static and doesn't change.
 
 #### NegRisk Group Response
 ```json
@@ -158,10 +168,14 @@ Returns one of three response types based on market type:
     {
       "slug": "candidate-a-wins",
       "title": "Candidate A wins",
-      "position_ids": ["...", "..."]
+      "positionIds": ["...", "..."]
     }
   ],
-  "negRiskMarketId": "0x..."
+  "negRiskMarketId": "0x...",
+  "venue": {
+    "exchange": "0x...",
+    "adapter": "0x..."
+  }
 }
 ```
 
@@ -256,9 +270,12 @@ Search markets by semantic similarity.
 | `status` | string | Market status (FUNDED, RESOLVED, etc.) |
 | `deadline` | string | Resolution deadline (ISO 8601) |
 | `condition_id` | string | Bytes32 condition identifier |
-| `position_ids` | array | YES/NO position token IDs |
+| `positionIds` | array | YES/NO position token IDs (`[0]` = YES, `[1]` = NO) |
 | `outcome_slot_count` | number | Number of outcomes (usually 2) |
 | `winning_index` | number | Winning outcome (0 or 1) after resolution |
+| `venue` | object | Contract addresses for trading (CLOB markets) |
+| `venue.exchange` | string | Exchange contract (use as verifyingContract) |
+| `venue.adapter` | string | Adapter contract (for NegRisk SELL approvals) |
 
 ### Volume/Liquidity
 

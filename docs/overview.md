@@ -31,17 +31,27 @@ WebSocket: wss://ws.limitless.exchange
 
 ### Trading Mechanics
 
-- **YES/NO Tokens**: Each market has two outcome tokens
+- **YES/NO Tokens**: Each market has two outcome tokens (`positionIds[0]` = YES, `positionIds[1]` = NO)
 - **Prices**: Expressed as decimals (0.01-0.99), representing probability
 - **USDC Collateral**: All trades settled in USDC (6 decimals)
 - **EIP-712 Signing**: Orders require cryptographic signatures
+- **Checksummed Addresses**: All addresses must be EIP-55 checksummed
 
-### Contract Addresses (Base Mainnet)
+### Venue System (CRITICAL for Trading)
 
-| Contract | Address |
-|----------|---------|
-| CLOB CTF Exchange | `0xa4409D988CA2218d956BeEFD3874100F444f0DC3` |
-| NegRisk CTF Exchange | `0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6` |
+Each CLOB market has a `venue` object containing contract addresses. You must:
+
+1. **Fetch market data** via `GET /markets/{slug}` to get `venue.exchange` and `venue.adapter`
+2. **Use `venue.exchange`** as the `verifyingContract` in EIP-712 order signing
+3. **Cache venue data** per market (it's static and doesn't change)
+
+### Required Token Approvals
+
+| Order Type | Market Type | Approve To |
+|------------|-------------|------------|
+| BUY | All CLOB | USDC → `venue.exchange` |
+| SELL | Simple CLOB | CT → `venue.exchange` |
+| SELL | NegRisk/Grouped | CT → `venue.exchange` AND `venue.adapter` |
 
 ## Authentication Methods
 

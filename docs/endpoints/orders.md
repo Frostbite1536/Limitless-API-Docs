@@ -7,15 +7,41 @@ Endpoints for creating and managing buy/sell orders on CLOB markets.
 Before placing orders:
 
 1. **Authentication**: Must be logged in with session cookie
-2. **USDC Approval**: Approve USDC spending for the CTF Exchange contract
-3. **Conditional Token Approval**: For selling, approve conditional tokens
+2. **Fetch Market Data**: Get venue info from `GET /markets/{slug}` (cache per market)
+3. **Token Approvals**: Set up approvals based on order type (see below)
 
-### Contract Addresses (Base Mainnet)
+### Venue System (CRITICAL)
 
-| Contract | Address |
-|----------|---------|
-| CLOB CTF Exchange | `0xa4409D988CA2218d956BeEFD3874100F444f0DC3` |
-| NegRisk CTF Exchange | `0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6` |
+CLOB markets use a **venue system** where each market has specific contract addresses. You must:
+
+1. Fetch market data via `GET /markets/{slug}` to get `venue.exchange` and `venue.adapter`
+2. Use `venue.exchange` as the `verifyingContract` in EIP-712 order signing
+3. Cache venue data per market (it's static and doesn't change)
+
+**Sample venue response from market data:**
+```json
+{
+  "venue": {
+    "exchange": "0xA1b2C3...",
+    "adapter": "0xD4e5F6..."
+  }
+}
+```
+
+### Required Token Approvals
+
+| Order Type | Market Type | Approve To |
+|------------|-------------|------------|
+| BUY | All CLOB | USDC → `venue.exchange` |
+| SELL | Simple CLOB | CT → `venue.exchange` |
+| SELL | NegRisk/Grouped | CT → `venue.exchange` AND `venue.adapter` |
+
+### Checksummed Addresses
+
+All addresses must use **checksummed format** (EIP-55 mixed-case):
+- Authentication: `x-account` header
+- Orders: `maker` and `signer` fields
+- Example: `0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed`
 
 ## Endpoints
 
@@ -55,19 +81,24 @@ Create a new signed buy or sell order.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `salt` | number | Yes | Random value for signature uniqueness |
-| `maker` | string | Yes | Your Ethereum address |
+| `maker` | string | Yes | Your Ethereum address (checksummed) |
 | `signer` | string | Yes | Address that signed (usually same as maker) |
 | `taker` | string | No | Specific taker address (use zero address for open orders) |
-| `tokenId` | string | Yes | YES or NO position ID from market data |
+| `tokenId` | string | Yes | YES or NO position ID from market's `positionIds` |
 | `makerAmount` | number | Yes | Amount you're offering (USDC, 6 decimals) |
 | `takerAmount` | number | Yes | Amount you want in return (shares, 6 decimals) |
 | `expiration` | string | No | Expiration timestamp (0 = no expiration) |
 | `nonce` | number | No | Order nonce for cancellation |
-| `feeRateBps` | number | Yes | Fee rate in basis points (100 = 1%) |
+| `feeRateBps` | number | Yes | Fee rate in basis points (get from user data) |
 | `side` | number | Yes | 0 = BUY, 1 = SELL |
 | `signature` | string | Yes | EIP-712 signature |
 | `signatureType` | number | Yes | 0 = EOA, 1-3 = other types |
 | `price` | number | GTC only | Price for GTC orders (0.01-0.99) |
+
+**Fee Rate**: Get from user data after authentication:
+```python
+fee_rate_bps = user_data.get("rank", {}).get("feeRateBps", 0)
+```
 
 **Order Types**:
 
@@ -76,7 +107,7 @@ Create a new signed buy or sell order.
 | `GTC` | Good Till Cancelled - stays open until filled or cancelled |
 | `FOK` | Fill Or Kill - must fill completely or fails |
 
-**Response** (200):
+**Response** (201):
 ```json
 {
   "order": {
@@ -193,15 +224,19 @@ Cancel all open orders for a specific market.
 
 Orders must be signed using EIP-712 typed data signing.
 
-### Domain
+### Domain (IMPORTANT: Use venue.exchange)
 
 ```javascript
-{
+// Fetch market data first to get venue
+const market = await getMarket(slug);
+const venueExchange = market.venue.exchange;
+
+const domain = {
   name: 'Limitless CTF Exchange',
   version: '1',
   chainId: 8453,  // Base mainnet
-  verifyingContract: '0xa4409D988CA2218d956BeEFD3874100F444f0DC3'  // or NegRisk address
-}
+  verifyingContract: venueExchange  // From market's venue data
+};
 ```
 
 ### Order Type Structure
@@ -254,3 +289,24 @@ taker_amount = int(shares * scaling_factor)  # 100,000,000
 - `takerAmount`: What you're receiving (outcome tokens)
 - For BUY orders: `price = makerAmount / takerAmount`
 - All amounts use 6 decimal places (USDC standard)
+
+## Complete Order Flow
+
+```python
+# 1. Authenticate
+session, user = authenticate(private_key)
+owner_id = user["id"]
+fee_rate_bps = user.get("rank", {}).get("feeRateBps", 0)
+
+# 2. Fetch market data (cache this per market)
+market = get_market(market_slug)
+venue_exchange = market["venue"]["exchange"]
+token_id = market["positionIds"][0]  # YES token
+
+# 3. Create order with venue's exchange as verifyingContract
+order = create_order(maker, token_id, amounts, fee_rate_bps)
+signature = sign_with_eip712(order, venue_exchange)
+
+# 4. Submit
+result = submit_order(order, signature, owner_id, market_slug)
+```

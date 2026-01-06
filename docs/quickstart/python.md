@@ -75,11 +75,24 @@ def authenticate(private_key):
 ### 2. Market Data Module
 
 ```python
+# Cache for market data (venue is static per market)
+MARKET_CACHE = {}
+
 def get_market(slug):
-    """Fetch market details by slug."""
+    """Fetch market details by slug (cached)."""
+    if slug in MARKET_CACHE:
+        return MARKET_CACHE[slug]
+
     response = requests.get(f"{API_URL}/markets/{slug}")
     response.raise_for_status()
-    return response.json()
+    market = response.json()
+    MARKET_CACHE[slug] = market
+    return market
+
+def get_venue_exchange(slug):
+    """Get venue exchange address for EIP-712 signing."""
+    market = get_market(slug)
+    return market["venue"]["exchange"]
 
 def get_orderbook(slug):
     """Fetch current orderbook."""
@@ -104,7 +117,6 @@ from eth_account.messages import encode_typed_data
 import time
 import random
 
-CLOB_CTF_ADDRESS = "0xa4409D988CA2218d956BeEFD3874100F444f0DC3"
 CHAIN_ID = 8453  # Base mainnet
 
 def create_order_payload(maker, token_id, maker_amount, taker_amount, fee_rate_bps=0):
@@ -124,15 +136,16 @@ def create_order_payload(maker, token_id, maker_amount, taker_amount, fee_rate_b
         "signatureType": 0  # EOA
     }
 
-def sign_order(private_key, order_payload):
-    """Sign order using EIP-712."""
+def sign_order(private_key, order_payload, venue_exchange):
+    """Sign order using EIP-712 with venue's exchange address."""
     account = Account.from_key(private_key)
 
+    # IMPORTANT: Use venue.exchange from market data as verifyingContract
     domain = {
         "name": "Limitless CTF Exchange",
         "version": "1",
         "chainId": CHAIN_ID,
-        "verifyingContract": CLOB_CTF_ADDRESS
+        "verifyingContract": venue_exchange  # From market's venue data
     }
 
     types = {
@@ -243,14 +256,19 @@ def execute_trade(market_slug, token_type, price_cents, amount):
     print("Authenticating...")
     session_cookie, user_data = authenticate(private_key)
     owner_id = user_data.get("id")
-    maker_address = user_data.get("account")
+    maker_address = user_data.get("account")  # Already checksummed
+    fee_rate_bps = user_data.get("rank", {}).get("feeRateBps", 0)
 
-    # Step 2: Get market data
+    # Step 2: Get market data (cached per market)
     print(f"Fetching market: {market_slug}")
     market = get_market(market_slug)
 
-    # Get token ID
-    position_ids = market.get("position_ids", [])
+    # Get venue exchange for EIP-712 signing
+    venue_exchange = market["venue"]["exchange"]
+    print(f"Using venue exchange: {venue_exchange}")
+
+    # Get token ID (positionIds[0] = YES, positionIds[1] = NO)
+    position_ids = market.get("positionIds", [])
     token_id = position_ids[0] if token_type == "YES" else position_ids[1]
 
     # Step 3: Calculate amounts
@@ -269,10 +287,12 @@ def execute_trade(market_slug, token_type, price_cents, amount):
         maker=maker_address,
         token_id=token_id,
         maker_amount=maker_amount,
-        taker_amount=taker_amount
+        taker_amount=taker_amount,
+        fee_rate_bps=fee_rate_bps
     )
 
-    signature = sign_order(private_key, order_payload)
+    # Sign using venue's exchange address as verifyingContract
+    signature = sign_order(private_key, order_payload, venue_exchange)
     order_payload["signature"] = signature
     order_payload["price"] = price_dollars
 
