@@ -233,6 +233,147 @@ Server error - try again later. If persistent, contact support.
 
 ---
 
+## User Questions
+
+Real questions from developers using the API.
+
+### "Signer does not match with correct address - you should use embedded address for smart wallet"
+
+**Full error**: `API Error 400: {"message":"Signer does not match with correct address - you should use embedded address for smart wallet"}`
+
+**Cause**: Your account is registered as a smart wallet, but you're signing orders with a regular EOA private key. The `maker`/`signer` address in your order doesn't match what the API expects.
+
+**Solutions**:
+
+1. **If you want to use a regular EOA wallet** (most common fix):
+   ```python
+   # Make sure you login with client: "eoa"
+   response = requests.post(
+       f"{API_URL}/auth/login",
+       headers=headers,
+       json={"client": "eoa"}  # NOT "smart_wallet"
+   )
+   ```
+
+2. **Check your user data after authentication**:
+   ```python
+   session, user_data = authenticate(private_key)
+   print(user_data)
+
+   # Look for these fields:
+   # - 'account': Your address (use this for maker/signer)
+   # - 'smartWallet': If present, your account is linked to a smart wallet
+   # - 'client': Should be "eoa" for regular wallets
+   ```
+
+3. **Use the correct address for orders**:
+   ```python
+   # Always use the checksummed address from user_data
+   maker_address = user_data['account']  # Already checksummed
+
+   order = {
+       "maker": maker_address,
+       "signer": maker_address,  # Same as maker for EOA
+       # ... rest of order
+   }
+   ```
+
+4. **If your account is permanently linked to a smart wallet**:
+   - Create a new account with a fresh wallet address
+   - Or contact Limitless support to unlink the smart wallet
+
+**Prevention**: When first setting up, always use `client: "eoa"` unless you specifically need smart wallet functionality.
+
+---
+
+### Order signature verification fails but my code looks correct
+
+**Common causes**:
+
+1. **Wrong verifyingContract** - You're using a hardcoded address instead of `venue.exchange`:
+   ```python
+   # WRONG - hardcoded address
+   domain = {
+       "verifyingContract": "0xa4409D988CA2218d956BeEFD3874100F444f0DC3"
+   }
+
+   # CORRECT - fetch from market data
+   market = get_market(slug)
+   domain = {
+       "verifyingContract": market['venue']['exchange']
+   }
+   ```
+
+2. **Address not checksummed** - All addresses must use EIP-55 mixed-case format:
+   ```python
+   # WRONG
+   maker = "0x742d35cc6634c0532925a3b844bc454e4438f44e"
+
+   # CORRECT
+   maker = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+
+   # Use web3 to checksum
+   from web3 import Web3
+   maker = Web3.to_checksum_address(address)
+   ```
+
+3. **Wrong chain ID** - Must be 8453 (Base mainnet):
+   ```python
+   domain = {
+       "chainId": 8453,  # Base mainnet
+       # ...
+   }
+   ```
+
+4. **Field type mismatches** - Amounts must be strings in the signed message:
+   ```python
+   order = {
+       "makerAmount": str(65000000),  # String, not int
+       "takerAmount": str(100000000),
+       # ...
+   }
+   ```
+
+---
+
+### My order was accepted but nothing happened
+
+**Possible causes**:
+
+1. **Price too far from market** - Your limit price may not match any existing orders
+2. **Insufficient liquidity** - Not enough counter-orders to fill yours
+3. **GTC order queued** - Good Till Cancelled orders wait for a match
+
+**How to check**:
+```python
+# Check your open orders
+response = requests.get(
+    f"{API_URL}/markets/{slug}/user-orders",
+    cookies={"limitless_session": session}
+)
+print(response.json())
+```
+
+---
+
+### "Invalid token ID" or position not found
+
+**Cause**: Using the wrong `tokenId` for the market.
+
+**Fix**: Always fetch fresh from market data:
+```python
+market = get_market(slug)
+
+# positionIds[0] = YES token
+# positionIds[1] = NO token
+yes_token_id = market['positionIds'][0]
+no_token_id = market['positionIds'][1]
+
+# Don't hardcode these - they're unique per market
+```
+
+---
+
 ## Best Practices
 
 ### Security
