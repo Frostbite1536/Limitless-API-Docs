@@ -195,11 +195,13 @@ interface ErrorResponseDto {
 For signing orders, use this EIP-712 typed data structure:
 
 ```typescript
+// Get verifyingContract from market's venue.exchange
+// See docs/contracts.md for all contract addresses
 const domain = {
   name: 'Limitless CTF Exchange',
   version: '1',
   chainId: 8453,             // Base mainnet
-  verifyingContract: '0xa4409D988CA2218d956BeEFD3874100F444f0DC3'
+  verifyingContract: market.venue.exchange  // e.g., '0xa4409D988CA2218d956BeEFD3874100F444f0DC3' for simple v1
 };
 
 const types = {

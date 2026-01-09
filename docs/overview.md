@@ -45,6 +45,8 @@ Each CLOB market has a `venue` object containing contract addresses. You must:
 2. **Use `venue.exchange`** as the `verifyingContract` in EIP-712 order signing
 3. **Cache venue data** per market (it's static and doesn't change)
 
+See [Smart Contract Addresses](contracts.md) for the complete list of trading venue contracts.
+
 ### Required Token Approvals
 
 | Order Type | Market Type | Approve To |
@@ -80,6 +82,7 @@ Each CLOB market has a `venue` object containing contract addresses. You must:
 ```
 docs/
 ├── overview.md              # This file
+├── contracts.md             # Smart contract addresses
 ├── endpoints/
 │   ├── authentication.md    # Auth endpoints
 │   ├── markets.md           # Market browsing/search
