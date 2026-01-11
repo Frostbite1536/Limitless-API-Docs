@@ -7,6 +7,7 @@ Real questions and issues from developers using the Limitless Exchange API.
 | Issue | Description |
 |-------|-------------|
 | [Automating Market Search by Category](market-search-automation.md) | How to fetch market data from an API for analysis (e.g., which markets have ended) instead of manually copying or using spreadsheets |
+| [Portfolio History and Wallet Types](portfolio-history-wallet-types.md) | Does `/portfolio/history` work with smart wallets or only EOA wallets? |
 | [Smart Wallet Signer Mismatch](smart-wallet-signer-mismatch.md) | "Signer does not match with correct address" error |
 | [Smart Wallet Signature Type](smart-wallet-signature-type.md) | Signature errors when using smart wallet with wrong signatureType |
 | [Signature Verification Failed](signature-verification-failed.md) | Order signature errors and debugging |
