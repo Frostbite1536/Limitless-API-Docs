@@ -6,6 +6,7 @@ Real questions and issues from developers using the Limitless Exchange API.
 
 | Issue | Description |
 |-------|-------------|
+| [Tracking LP Rewards](lp-rewards-tracking.md) | How to check if you're earning LP rewards and how much |
 | [Automating Market Search by Category](market-search-automation.md) | How to fetch market data from an API for analysis (e.g., which markets have ended) instead of manually copying or using spreadsheets |
 | [Finding Markets by Name or Characteristics](finding-markets-by-name.md) | How to find a market slug by name (e.g., "1hr BTC") using search, filtering, or browsing |
 | [Portfolio History and Wallet Types](portfolio-history-wallet-types.md) | Does `/portfolio/history` work with smart wallets or only EOA wallets? |
