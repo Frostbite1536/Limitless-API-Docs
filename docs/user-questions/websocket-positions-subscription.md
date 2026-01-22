@@ -6,11 +6,58 @@
 
 **Yes**, you use `socket.emit('subscribe_positions', ...)` but you **must provide the `marketAddresses` parameter** as an array of market contract addresses. Authentication is also required.
 
+## What is `marketAddresses`?
+
+The `marketAddresses` is the **market's own contract address** - specifically the `address` field returned from the market API endpoint.
+
+**It is NOT:**
+- ❌ YES/NO token addresses
+- ❌ `venue.exchange` address (used for order signing)
+- ❌ `conditionId`
+- ❌ `collateralToken.address` (USDC token)
+
+**It IS:**
+- ✅ The `address` field from `GET /markets/{slug}` response
+
+### How to Get the Market Address
+
+```typescript
+// Step 1: Fetch the market data
+const response = await fetch('https://api.limitless.exchange/markets/your-market-slug');
+const market = await response.json();
+
+// Step 2: Use the 'address' field (NOT venue.exchange, NOT token addresses)
+const marketAddress = market.address;  // e.g., "0x76d3e2098Be66Aa7E15138F467390f0Eb7349B9b"
+
+// Step 3: Subscribe with the market address
+socket.emit('subscribe_positions', {
+  marketAddresses: [marketAddress]
+});
+```
+
+### Example API Response
+
+```json
+{
+  "id": 7495,
+  "address": "0x76d3e2098Be66Aa7E15138F467390f0Eb7349B9b",  // ✅ THIS is marketAddresses
+  "conditionId": "0x812f578...",                            // ❌ NOT this
+  "title": "$DOGE above $0.21652...",
+  "venue": {
+    "exchange": "0xABC123...",                              // ❌ NOT this (used for order signing)
+    "adapter": "0xDEF456..."
+  },
+  "collateralToken": {
+    "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"  // ❌ NOT this (USDC token)
+  }
+}
+```
+
 ## Required Parameters
 
 ```typescript
 socket.emit('subscribe_positions', {
-  marketAddresses: string[]  // Array of market contract addresses (required)
+  marketAddresses: string[]  // Array of market 'address' fields from API (required)
 });
 ```
 
