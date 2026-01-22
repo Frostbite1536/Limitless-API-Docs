@@ -40,6 +40,21 @@ The `subscribe_positions` WebSocket event works differently depending on market 
 }
 ```
 
+#### What happens if you try `venue.exchange` for CLOB markets?
+
+If you try using `venue.exchange` as the `marketAddress` for a CLOB market, you'll get a response but with **`positions: null`**:
+
+```json
+{
+  "account": "0xYourWalletAddress...",
+  "marketAddress": "0x05c748E2f4DcDe0ec9Fa8DDc40DE6b867f923fa5",
+  "positions": null,   // ❌ No position data!
+  "type": "AMM"        // Still says AMM - this event is designed for AMM markets
+}
+```
+
+The `type: "AMM"` in the response indicates that `subscribe_positions` is designed for AMM markets, not CLOB markets. Even though the WebSocket accepts the subscription, it won't return actual position data for CLOB markets.
+
 **For CLOB positions, use the REST API instead:**
 
 ```typescript
