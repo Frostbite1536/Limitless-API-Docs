@@ -6,7 +6,7 @@ Step-by-step guide to placing orders on the Limitless Exchange.
 
 Placing an order on Limitless Exchange requires:
 
-1. **Authentication** - Login with wallet signature
+1. **Authentication** - Use API key (recommended) or wallet login (deprecated)
 2. **Market Data** - Get position IDs for the market
 3. **Amount Calculation** - Calculate maker/taker amounts
 4. **Order Signing** - Sign order with EIP-712
@@ -14,14 +14,29 @@ Placing an order on Limitless Exchange requires:
 
 ## Step 1: Authentication
 
-Before placing orders, authenticate with your wallet.
+Before placing orders, set up authentication. API keys are recommended.
+
+### Using API Key (Recommended)
 
 ```python
 import requests
-from eth_account import Account
-from eth_account.messages import encode_defunct
 
 API_URL = "https://api.limitless.exchange"
+API_KEY = "lmts_your_key_here"  # Generate at limitless.exchange (profile → Api keys)
+
+# All authenticated requests use this header
+auth_headers = {"X-API-Key": API_KEY}
+```
+
+No login flow needed. Include `auth_headers` in all authenticated requests.
+
+### Using Cookie Session (Deprecated)
+
+> **WARNING**: Cookie-based authentication is deprecated and will be removed within weeks.
+
+```python
+from eth_account import Account
+from eth_account.messages import encode_defunct
 
 def authenticate(private_key):
     account = Account.from_key(private_key)
@@ -52,8 +67,6 @@ def authenticate(private_key):
 
     return session, user
 ```
-
-**Result**: Session cookie and user data including `id` (owner ID) and `account` (address).
 
 ## Step 2: Get Market Data
 
@@ -254,12 +267,12 @@ venue_adapter = market['venue']['adapter']    # For NegRisk SELL orders
 Submit the signed order to the API.
 
 ```python
-def submit_order(session, order_payload, owner_id, market_slug, order_type="GTC"):
+def submit_order(api_key, order_payload, owner_id, market_slug, order_type="GTC"):
     """
     Submit order to API.
 
     Args:
-        session: Session cookie
+        api_key: API key (lmts_...)
         order_payload: Signed order payload
         owner_id: User profile ID
         market_slug: Market identifier
@@ -278,7 +291,7 @@ def submit_order(session, order_payload, owner_id, market_slug, order_type="GTC"
     response = requests.post(
         f"{API_URL}/orders",
         json=payload,
-        cookies={"limitless_session": session}
+        headers={"X-API-Key": api_key}
     )
 
     if not response.ok:
@@ -309,14 +322,11 @@ def place_order(market_slug, token_type, price_cents, shares):
         price_cents: Price in cents
         shares: Number of shares
     """
+    api_key = os.environ['LIMITLESS_API_KEY']
     private_key = os.environ['PRIVATE_KEY']
+    maker = Account.from_key(private_key).address
 
-    # Step 1: Authenticate
-    session, user = authenticate(private_key)
-    owner_id = user['id']
-    maker = user['account']
-
-    # Step 2: Get market data (cached per market)
+    # Step 1: Get market data (cached per market)
     market = get_market(market_slug)
 
     # Get venue exchange for EIP-712 signing (CRITICAL)
@@ -325,19 +335,19 @@ def place_order(market_slug, token_type, price_cents, shares):
     # Get token ID (positionIds[0] = YES, positionIds[1] = NO)
     token_id = market['positionIds'][0 if token_type == "YES" else 1]
 
-    # Step 3: Calculate amounts
+    # Step 2: Calculate amounts
     maker_amount, taker_amount = calculate_amounts(price_cents, shares)
 
-    # Step 4: Create order
+    # Step 3: Create order
     order = create_order_payload(maker, token_id, maker_amount, taker_amount)
 
-    # Step 5: Sign order using venue's exchange address
+    # Step 4: Sign order using venue's exchange address
     signature = sign_order(private_key, order, venue_exchange)
     order['signature'] = signature
     order['price'] = price_cents / 100  # Required for GTC
 
-    # Step 6: Submit
-    result = submit_order(session, order, owner_id, market_slug, "GTC")
+    # Step 5: Submit with API key
+    result = submit_order(api_key, order, owner_id, market_slug, "GTC")
 
     return result
 

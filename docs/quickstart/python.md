@@ -13,64 +13,32 @@ pip install requests eth-account web3
 ### Environment Variables
 
 ```bash
-export PRIVATE_KEY="0x..."  # Your wallet private key
+export LIMITLESS_API_KEY="lmts_..."  # Your API key (generate at limitless.exchange)
+export PRIVATE_KEY="0x..."           # Your wallet private key (for order signing)
 ```
 
-**Security Warning**: Never commit private keys to version control.
+**Security Warning**: Never commit API keys or private keys to version control.
 
 ## Complete Trading Example
 
-### 1. Authentication Module
+### 1. Authentication
+
+API key authentication is recommended. Generate a key at [limitless.exchange](https://limitless.exchange) (profile menu → Api keys).
 
 ```python
+import os
 import requests
 from eth_account import Account
-from eth_account.messages import encode_defunct
 
 API_URL = "https://api.limitless.exchange"
+API_KEY = os.environ.get("LIMITLESS_API_KEY")
 
-def string_to_hex(text):
-    """Convert string to hex with 0x prefix."""
-    return '0x' + text.encode('utf-8').hex()
-
-def get_signing_message():
-    """Get signing message with nonce from API."""
-    response = requests.get(f"{API_URL}/auth/signing-message")
-    response.raise_for_status()
-    return response.text
-
-def authenticate(private_key):
-    """Authenticate and return session cookie + user data."""
-    account = Account.from_key(private_key)
-    address = account.address
-
-    # Get and sign message
-    signing_message = get_signing_message()
-    message = encode_defunct(text=signing_message)
-    signature = account.sign_message(message)
-
-    # Prepare headers
-    headers = {
-        'x-account': address,
-        'x-signing-message': string_to_hex(signing_message),
-        'x-signature': '0x' + signature.signature.hex(),
-        'Content-Type': 'application/json'
-    }
-
-    # Login request
-    response = requests.post(
-        f"{API_URL}/auth/login",
-        headers=headers,
-        json={"client": "eoa"}
-    )
-    response.raise_for_status()
-
-    # Extract session cookie
-    session_cookie = response.cookies.get('limitless_session')
-    user_data = response.json()
-
-    return session_cookie, user_data
+def get_auth_headers():
+    """Get authentication headers with API key."""
+    return {"X-API-Key": API_KEY}
 ```
+
+> **Note**: Cookie-based authentication via `POST /auth/login` is deprecated and will be removed within weeks. Migrate to API keys.
 
 ### 2. Market Data Module
 
@@ -175,7 +143,7 @@ def sign_order(private_key, order_payload, venue_exchange):
 ### 4. Order Management
 
 ```python
-def create_order(session_cookie, order_payload, owner_id, market_slug, order_type="GTC"):
+def create_order(order_payload, owner_id, market_slug, order_type="GTC"):
     """Submit order to API."""
     payload = {
         "order": order_payload,
@@ -187,25 +155,25 @@ def create_order(session_cookie, order_payload, owner_id, market_slug, order_typ
     response = requests.post(
         f"{API_URL}/orders",
         json=payload,
-        cookies={"limitless_session": session_cookie}
+        headers=get_auth_headers()
     )
     response.raise_for_status()
     return response.json()
 
-def cancel_order(session_cookie, order_id):
+def cancel_order(order_id):
     """Cancel a specific order."""
     response = requests.delete(
         f"{API_URL}/orders/{order_id}",
-        cookies={"limitless_session": session_cookie}
+        headers=get_auth_headers()
     )
     response.raise_for_status()
     return response.json()
 
-def cancel_all_orders(session_cookie, market_slug):
+def cancel_all_orders(market_slug):
     """Cancel all orders in a market."""
     response = requests.delete(
         f"{API_URL}/orders/all/{market_slug}",
-        cookies={"limitless_session": session_cookie}
+        headers=get_auth_headers()
     )
     response.raise_for_status()
     return response.json()
@@ -214,20 +182,20 @@ def cancel_all_orders(session_cookie, market_slug):
 ### 5. Portfolio Functions
 
 ```python
-def get_positions(session_cookie):
+def get_positions():
     """Get all portfolio positions."""
     response = requests.get(
         f"{API_URL}/portfolio/positions",
-        cookies={"limitless_session": session_cookie}
+        headers=get_auth_headers()
     )
     response.raise_for_status()
     return response.json()
 
-def get_trades(session_cookie):
+def get_trades():
     """Get trade history."""
     response = requests.get(
         f"{API_URL}/portfolio/trades",
-        cookies={"limitless_session": session_cookie}
+        headers=get_auth_headers()
     )
     response.raise_for_status()
     return response.json()
@@ -236,8 +204,6 @@ def get_trades(session_cookie):
 ### 6. Main Trading Function
 
 ```python
-import os
-
 def execute_trade(market_slug, token_type, price_cents, amount):
     """
     Execute a complete trade.
@@ -251,15 +217,13 @@ def execute_trade(market_slug, token_type, price_cents, amount):
     private_key = os.environ.get("PRIVATE_KEY")
     if not private_key:
         raise ValueError("PRIVATE_KEY environment variable not set")
+    if not API_KEY:
+        raise ValueError("LIMITLESS_API_KEY environment variable not set")
 
-    # Step 1: Authenticate
-    print("Authenticating...")
-    session_cookie, user_data = authenticate(private_key)
-    owner_id = user_data.get("id")
-    maker_address = user_data.get("account")  # Already checksummed
-    fee_rate_bps = user_data.get("rank", {}).get("feeRateBps", 0)
+    account = Account.from_key(private_key)
+    maker_address = account.address  # Already checksummed
 
-    # Step 2: Get market data (cached per market)
+    # Step 1: Get market data (cached per market)
     print(f"Fetching market: {market_slug}")
     market = get_market(market_slug)
 
@@ -271,7 +235,7 @@ def execute_trade(market_slug, token_type, price_cents, amount):
     position_ids = market.get("positionIds", [])
     token_id = position_ids[0] if token_type == "YES" else position_ids[1]
 
-    # Step 3: Calculate amounts
+    # Step 2: Calculate amounts
     price_dollars = price_cents / 100
     total_cost = price_dollars * amount
     scaling_factor = 1_000_000  # USDC decimals
@@ -282,13 +246,13 @@ def execute_trade(market_slug, token_type, price_cents, amount):
     print(f"Buying {amount} {token_type} at ${price_dollars}")
     print(f"Total cost: ${total_cost}")
 
-    # Step 4: Create and sign order
+    # Step 3: Create and sign order
     order_payload = create_order_payload(
         maker=maker_address,
         token_id=token_id,
         maker_amount=maker_amount,
         taker_amount=taker_amount,
-        fee_rate_bps=fee_rate_bps
+        fee_rate_bps=0
     )
 
     # Sign using venue's exchange address as verifyingContract
@@ -296,12 +260,11 @@ def execute_trade(market_slug, token_type, price_cents, amount):
     order_payload["signature"] = signature
     order_payload["price"] = price_dollars
 
-    # Step 5: Submit order
+    # Step 4: Submit order with API key
     print("Submitting order...")
     result = create_order(
-        session_cookie=session_cookie,
         order_payload=order_payload,
-        owner_id=owner_id,
+        owner_id=0,  # Set to your user ID
         market_slug=market_slug,
         order_type="GTC"
     )
@@ -335,8 +298,8 @@ def get_best_prices(slug):
 ### Calculate Portfolio Value
 
 ```python
-def calculate_portfolio_value(session_cookie):
-    positions = get_positions(session_cookie)
+def calculate_portfolio_value():
+    positions = get_positions()
     total_value = 0
 
     for pos in positions['clob']:

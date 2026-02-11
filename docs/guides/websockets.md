@@ -105,7 +105,7 @@ socket.on('orderbookUpdate', (data) => {
 
 ## Authenticated Connections
 
-For private data streams (if/when available), include session cookie:
+For private data streams, pass the `X-API-Key` header during the connection handshake:
 
 ### JavaScript/TypeScript
 
@@ -113,7 +113,7 @@ For private data streams (if/when available), include session cookie:
 const socket = io('wss://ws.limitless.exchange/markets', {
   transports: ['websocket'],
   extraHeaders: {
-    Cookie: `limitless_session=${sessionCookie}`
+    'X-API-Key': 'lmts_your_key_here'
   }
 });
 ```
@@ -126,9 +126,11 @@ sio = socketio.Client()
 sio.connect(
     'wss://ws.limitless.exchange',
     namespaces=['/markets'],
-    headers={'Cookie': f'limitless_session={session_cookie}'}
+    headers={'X-API-Key': 'lmts_your_key_here'}
 )
 ```
+
+> **Note**: Cookie-based WebSocket authentication (`Cookie: limitless_session=...`) is deprecated. Use `X-API-Key` header instead.
 
 ## Complete Python Example
 
@@ -148,9 +150,9 @@ WS_URL = 'wss://ws.limitless.exchange'
 NAMESPACE = '/markets'
 
 class LimitlessWebSocket:
-    def __init__(self, session_cookie=None):
+    def __init__(self, api_key=None):
         self.sio = socketio.AsyncClient()
-        self.session_cookie = session_cookie
+        self.api_key = api_key
         self._setup_handlers()
 
     def _setup_handlers(self):
@@ -172,8 +174,8 @@ class LimitlessWebSocket:
 
     async def connect(self):
         headers = {}
-        if self.session_cookie:
-            headers['Cookie'] = f'limitless_session={self.session_cookie}'
+        if self.api_key:
+            headers['X-API-Key'] = self.api_key
 
         await self.sio.connect(
             WS_URL,
@@ -253,14 +255,14 @@ class LimitlessWebSocket {
   private onPriceUpdate?: (data: PriceData) => void;
   private onOrderbookUpdate?: (data: OrderbookData) => void;
 
-  constructor(sessionCookie?: string) {
+  constructor(apiKey?: string) {
     const opts: Parameters<typeof io>[1] = {
       transports: ['websocket'],
     };
 
-    if (sessionCookie) {
+    if (apiKey) {
       opts.extraHeaders = {
-        Cookie: `limitless_session=${sessionCookie}`,
+        'X-API-Key': apiKey,
       };
     }
 
@@ -340,7 +342,7 @@ ws.subscribe(
 |-------|---------|---------------|-------------|
 | `subscribe_market_prices` | `{ marketAddresses?: string[], marketSlugs?: string[] }` | No | Subscribe to price/orderbook updates |
 | `subscribe_positions` | `{ marketAddresses: string[] }` | Yes | Subscribe to position updates |
-| `authenticate` | `Bearer {session_cookie}` | Yes | Authenticate WebSocket connection |
+| `authenticate` | API key or session token | Yes | Authenticate WebSocket connection |
 
 ### Server Events (on)
 
@@ -400,5 +402,6 @@ Socket.io handles heartbeat automatically. Default ping interval is 25 seconds.
 - Remember: new subscriptions replace old ones
 
 ### Authentication Errors
-- Session cookie may be expired
-- Re-authenticate and reconnect with new session
+- API key may be invalid or revoked
+- If using deprecated cookie auth: session may be expired
+- Use API key authentication via `X-API-Key` header instead

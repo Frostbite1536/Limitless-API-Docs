@@ -4225,11 +4225,16 @@ servers:
     description: Production API
 components:
   securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for programmatic access. Generate at limitless.exchange (profile → Api keys). Keys start with 'lmts_'.
     cookie:
       type: apiKey
       in: cookie
       name: limitless_session
-      description: Session authentication cookie obtained from /auth/login
+      description: "DEPRECATED: Session authentication cookie obtained from /auth/login. Will be removed within weeks. Migrate to API key (X-API-Key header)."
     bearer:
       scheme: bearer
       bearerFormat: JWT

@@ -1,5 +1,7 @@
 # WebSocket Positions Subscription
 
+> **Auth Update**: Code examples below use cookie-based auth which is **deprecated**. Replace `Cookie: limitless_session=...` with `X-API-Key: lmts_your_key_here` header. See [Authentication Guide](../../docs/guides/authentication.md).
+
 **Question**: I want to subscribe to `positions` websocket (TypeScript). Do I use `websocket.emit("subscribe_positions")`? Do I need to provide other params?
 
 ## Answer

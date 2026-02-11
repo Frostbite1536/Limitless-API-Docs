@@ -104,30 +104,53 @@ START: User gets signature error
 ```
 START: User gets authentication error
 │
-├─► Q1: Did they complete the login flow?
+├─► Q0: Are they using API key authentication?
 │   │
-│   ├─► NO: "Must call GET /auth/signing-message, sign it, then POST /auth/login"
-│   │       See: docs/guides/authentication.md
+│   ├─► NO (using deprecated cookie auth):
+│   │   "Cookie-based auth is DEPRECATED and being removed."
+│   │   "Migrate to API key: Generate at limitless.exchange (profile → Api keys)"
+│   │   "Use header: X-API-Key: lmts_your_key_here"
+│   │   See: docs/guides/authentication.md
+│   │
+│   └─► YES (using X-API-Key header): Continue to Q1
+│
+├─► Q1: Is the API key valid?
+│   │
+│   ├─► UNSURE: "Verify key starts with 'lmts_'"
+│   │           "Check key was not revoked in the UI"
+│   │           "Try generating a new key"
 │   │
 │   └─► YES: Continue to Q2
 │
-├─► Q2: Are they storing and sending the session cookie?
+├─► Q2: Is the X-API-Key header being sent correctly?
 │   │
-│   ├─► NO: "Session cookie 'limitless_session' must be sent with requests"
+│   ├─► NO: "Include header: X-API-Key: lmts_your_key_here"
+│   │       "Verify no extra whitespace or line breaks in key"
 │   │
-│   └─► YES: Continue to Q3
+│   └─► YES: "Check if key has been revoked - try generating a new one"
+│             "Contact support if issue persists"
 │
-├─► Q3: Is x-account header checksummed?
+│
+│   === LEGACY COOKIE AUTH (DEPRECATED) ===
+│
+├─► Q3: Did they complete the login flow?
 │   │
-│   ├─► NO: "x-account header must use EIP-55 checksum"
+│   ├─► NO: "Must call GET /auth/signing-message, sign it, then POST /auth/login"
+│   │       "BUT: Migrate to API key instead - cookie auth is being removed"
 │   │
 │   └─► YES: Continue to Q4
 │
-├─► Q4: Did they use client: "eoa" in login?
+├─► Q4: Are they storing and sending the session cookie?
 │   │
-│   ├─► NO or UNSURE: "For API trading, use client: 'eoa' in login request"
+│   ├─► NO: "Session cookie 'limitless_session' must be sent with requests"
 │   │
-│   └─► YES: "Check if session expired - try re-authenticating"
+│   └─► YES: Continue to Q5
+│
+├─► Q5: Is x-account header checksummed?
+│   │
+│   ├─► NO: "x-account header must use EIP-55 checksum"
+│   │
+│   └─► YES: "Check if session expired - re-authenticate or migrate to API key"
 ```
 
 ---
@@ -253,9 +276,10 @@ When debugging, gather this information:
 5. "What are the values of maker, signer, and signatureType?"
 
 ### For Authentication Errors
-1. "Are you storing the session cookie from login?"
-2. "What client type did you use in login? ('eoa' or 'smart_wallet')"
-3. "Is your x-account header checksummed?"
+1. "Are you using API key authentication (X-API-Key header) or deprecated cookie auth?"
+2. "If using API key: Does your key start with 'lmts_'? Has it been revoked?"
+3. "If using cookies (deprecated): Are you storing the session cookie from login?"
+4. "What client type did you use in login? ('eoa' or 'smart_wallet')"
 
 ### For Order Errors
 1. "Can you share your order payload (redact sensitive data)?"

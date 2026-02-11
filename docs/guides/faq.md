@@ -6,12 +6,18 @@ Common questions about the Limitless Exchange API.
 
 ### How do I authenticate with the API?
 
-Use wallet-based authentication with EIP-712 signatures:
+Use **API key authentication** (recommended):
 
-1. Get signing message: `GET /auth/signing-message`
-2. Sign the message with your wallet
-3. Login: `POST /auth/login` with signed message in headers
-4. Use returned session cookie for authenticated requests
+1. Log in to [limitless.exchange](https://limitless.exchange) using your wallet
+2. Go to profile menu → "Api keys"
+3. Generate a new key
+4. Include `X-API-Key: lmts_your_key_here` header in all requests
+
+```bash
+curl -H "X-API-Key: lmts_your_key_here" https://api.limitless.exchange/portfolio/positions
+```
+
+> **Note**: Cookie-based session authentication is **deprecated** and will be removed within weeks. Migrate to API keys immediately.
 
 See [Authentication Guide](../endpoints/authentication.md) for details.
 
@@ -20,13 +26,17 @@ See [Authentication Guide](../endpoints/authentication.md) for details.
 - **EOA wallets**: Standard Ethereum wallets (MetaMask, etc.)
 - **Smart wallets**: Contract-based wallets (set `client: "smart_wallet"`)
 
-### How long does a session last?
-
-Sessions expire after a period of inactivity. If you receive a 401 error, re-authenticate.
-
 ### Do I need authentication for all endpoints?
 
-No. Public endpoints (markets, orderbook) don't require authentication. Order management and portfolio endpoints require authentication.
+No. Public endpoints (markets, orderbook) don't require authentication. Order management and portfolio endpoints require API key authentication.
+
+### How do I migrate from cookie auth to API key?
+
+1. Generate an API key via the UI (profile menu → Api keys)
+2. Replace cookie header with API key header:
+   - Before: `Cookie: limitless_session=your_session_token`
+   - After: `X-API-Key: lmts_your_key_here`
+3. Remove session management code - no more login flow needed
 
 ---
 
@@ -34,7 +44,7 @@ No. Public endpoints (markets, orderbook) don't require authentication. Order ma
 
 ### How do I place an order?
 
-1. Authenticate and get session cookie
+1. Set up API key authentication
 2. Get market data to obtain position IDs
 3. Calculate maker/taker amounts
 4. Sign order using EIP-712
@@ -76,7 +86,7 @@ Common reasons:
 - **Insufficient balance**: Check USDC balance
 - **Market closed**: Market may be resolved or expired
 - **Price out of range**: Prices must be between 0.01 and 0.99
-- **Not approved**: Approve USDC spending for CTF contract
+- **Not approved**: Approve USDC spending for `venue.exchange` (see [Required Approvals](#what-are-the-contract-addresses))
 
 ---
 
@@ -139,7 +149,7 @@ socket.on('orderbookUpdate', (data) => console.log(data));
 
 ### Do I need authentication for WebSocket?
 
-No, public data streams don't require authentication. Include session cookie only if authenticated streams become available.
+No, public data streams don't require authentication. Pass the `X-API-Key` header during the connection handshake for authenticated streams (e.g., position updates).
 
 ---
 
@@ -149,7 +159,7 @@ No, public data streams don't require authentication. Include session cookie onl
 
 ```python
 GET /portfolio/positions
-# Requires: session cookie authentication
+# Requires: X-API-Key header
 ```
 
 ### How is P&L calculated?
@@ -214,7 +224,7 @@ Rate limits are enforced. Check response headers for current limits. Implement e
 
 ### What does error 401 mean?
 
-Unauthorized - your session has expired or you're accessing an authenticated endpoint without a session cookie. Re-authenticate.
+Unauthorized - your API key is invalid/revoked, or you're accessing an authenticated endpoint without an `X-API-Key` header. Generate a new API key at limitless.exchange if needed.
 
 ### What does error 400 mean?
 
@@ -250,10 +260,11 @@ For detailed troubleshooting of specific issues, see the [User Questions](../use
 
 ### Security
 
-- **Never** expose private keys in code
-- Use environment variables for sensitive data
+- **Never** expose API keys or private keys in code
+- Use environment variables for sensitive data (`LIMITLESS_API_KEY`, `PRIVATE_KEY`)
 - Test with small amounts first
 - Verify contract addresses before approving
+- Rotate API keys periodically via the Limitless Exchange UI
 
 ### Performance
 
@@ -268,9 +279,8 @@ try:
     result = api_call()
 except HTTPError as e:
     if e.response.status_code == 401:
-        # Re-authenticate
-        session = authenticate()
-        result = api_call()
+        # Check API key is valid, generate new one if needed
+        raise Exception("Authentication failed - check your API key")
     elif e.response.status_code == 429:
         # Rate limited - back off
         time.sleep(5)

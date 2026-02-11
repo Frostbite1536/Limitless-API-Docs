@@ -1,5 +1,7 @@
 # Accessing Historical Data for Backtesting
 
+> **Auth Update**: Code examples below that use cookie-based auth are **deprecated**. Replace `cookies={"limitless_session": session_cookie}` with `headers={"X-API-Key": "lmts_your_key_here"}`. See [Authentication Guide](../../docs/guides/authentication.md).
+
 **Question**: Is there a way with the API to access the historical data for backtesting purposes?
 
 ## Answer

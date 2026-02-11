@@ -2,6 +2,8 @@
 
 Real questions and issues from developers using the Limitless Exchange API.
 
+> **Auth Update**: Some code examples in these documents use cookie-based authentication which is **deprecated**. Replace `cookies={"limitless_session": ...}` or `Cookie: limitless_session=...` with API key authentication: `headers={"X-API-Key": "lmts_your_key_here"}` or `X-API-Key: lmts_your_key_here`. See [Authentication Guide](../guides/authentication.md).
+
 ## Questions Index
 
 | Issue | Description |

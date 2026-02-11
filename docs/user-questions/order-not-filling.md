@@ -1,5 +1,7 @@
 # Order Accepted But Not Filling
 
+> **Auth Update**: Code examples below use cookie-based auth which is **deprecated**. Replace `cookies={"limitless_session": session}` with `headers={"X-API-Key": "lmts_your_key_here"}`. See [Authentication Guide](../../docs/guides/authentication.md).
+
 ## Symptoms
 
 - Order submission returns success

@@ -22,14 +22,32 @@ When helping a user, consult these files based on their problem:
 | Portfolio questions | `docs/endpoints/portfolio.md` |
 | Language-specific help | `docs/quickstart/{python,typescript,java}.md` |
 
+## Authentication
+
+### API Key Authentication (Recommended)
+
+| Method | Header | Status |
+|--------|--------|--------|
+| API Key | `X-API-Key: lmts_...` | **Required** for programmatic access |
+| Cookie Session | `Cookie: limitless_session=...` | **Deprecated** (removal imminent) |
+
+Generate API keys via the Limitless Exchange UI (profile menu → Api keys). No login flow needed.
+
+```python
+headers = {"X-API-Key": "lmts_your_key_here"}
+response = requests.get(f"{API_URL}/portfolio/positions", headers=headers)
+```
+
+> **DEPRECATION NOTICE**: Cookie-based session authentication is deprecated and will be removed within weeks. Migrate to API keys immediately.
+
 ## The Order Placement Flow
 
 Every successful order follows this sequence:
 
 ```
 1. AUTHENTICATE
-   POST /auth/login with wallet signature
-   → Returns: session cookie, user data (id, account, feeRateBps)
+   Use X-API-Key header with your API key
+   (Legacy: POST /auth/login with wallet signature - DEPRECATED)
 
 2. FETCH MARKET DATA (cache this per market)
    GET /markets/{slug}
@@ -37,7 +55,6 @@ Every successful order follows this sequence:
 
 3. BUILD ORDER
    Use positionIds for tokenId
-   Use user.id for ownerId
    Use user.feeRateBps for feeRateBps
 
 4. SIGN ORDER (EIP-712)
@@ -45,12 +62,13 @@ Every successful order follows this sequence:
    Chain ID must be 8453
 
 5. SUBMIT ORDER
-   POST /orders with signed order payload
+   POST /orders with signed order payload + X-API-Key header
 ```
 
 ## Critical Rules (See LLM_INVARIANTS.md)
 
 Before diagnosing any issue, verify these are true:
+- Authentication uses `X-API-Key` header (not deprecated cookie)
 - `verifyingContract` comes from `market.venue.exchange` (never hardcoded)
 - `maker == signer` when using `signatureType: 0`
 - All addresses are checksummed (EIP-55 mixed-case)

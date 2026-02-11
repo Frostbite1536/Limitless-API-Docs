@@ -1,5 +1,7 @@
 # Portfolio History Endpoint and Wallet Types
 
+> **Auth Update**: Code examples below use cookie-based auth which is **deprecated**. Replace `cookies={"limitless_session": session_cookie}` with `headers={"X-API-Key": "lmts_your_key_here"}`. See [Authentication Guide](../../docs/guides/authentication.md).
+
 ## Symptoms
 
 - You're using a smart wallet and wondering if `/portfolio/history` will work

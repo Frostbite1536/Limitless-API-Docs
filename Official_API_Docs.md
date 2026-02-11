@@ -77,6 +77,47 @@ _Production-ready API for prediction market trading, portfolio management, and m
 
 * * *
 
+## 🔐 Authentication for API Users
+
+⚠️ **DEPRECATION NOTICE**: Cookie-based session authentication is deprecated and will be removed within weeks. Please migrate to API keys immediately.
+
+| Method | Header | Status |
+| --- | --- | --- |
+| API Key | `X-API-Key: lmts_...` | ✅ Required for programmatic access |
+| Cookie Session | `Cookie: limitless_session=...` | ⚠️ Deprecated (removal imminent) |
+
+### Getting an API Key
+
+API keys can only be created via the Limitless Exchange UI:
+
+1. Log in to [limitless.exchange](https://limitless.exchange) using your wallet
+2. Click your profile menu (top right)
+3. Select "Api keys"
+4. Generate a new key
+
+### Using Your API Key
+
+Include in all requests via the `X-API-Key` header:
+
+```bash
+# REST API
+curl -H "X-API-Key: lmts_your_key_here" https://api.limitless.exchange/markets
+
+# WebSocket - pass X-API-Key header during connection handshake
+```
+
+### Migration from Cookie to API Key
+
+If you're currently using cookie-based authentication, migrate by:
+
+1. **Generate an API key** via the UI (profile menu → Api keys)
+2. **Replace cookie header with API key header**:
+   - Before (deprecated): `Cookie: limitless_session=your_session_token`
+   - After: `X-API-Key: lmts_your_key_here`
+3. **Remove session management code** - no more login flow or cookie handling needed
+
+* * *
+
 ## 🚀 Quick Start
 
 Choose your preferred programming language for complete end-to-end implementation:
@@ -87,7 +128,7 @@ The Limitless Exchange API offers both REST and WebSocket integration:
 
 **REST API (Trading)**:
 
-1. **🔐 Authentication**: Sign a message with your wallet to get authenticated
+1. **🔐 Authentication**: Use API key (`X-API-Key` header) for all authenticated requests
 2. **📊 Fetch Market Data**: Get market info including venue contract addresses (once per market)
 3. **📋 Order Creation**: Build and sign orders using EIP-712 structured data
 4. **🚀 Order Submission**: Submit signed orders and receive confirmations
