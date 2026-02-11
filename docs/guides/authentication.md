@@ -4,14 +4,86 @@ Complete guide to authenticating with the Limitless Exchange API.
 
 ## Overview
 
-Limitless Exchange uses wallet-based authentication with EIP-712 signatures. The flow is:
+Limitless Exchange supports two authentication methods:
+
+| Method | Header | Status |
+|--------|--------|--------|
+| API Key | `X-API-Key: lmts_...` | **Required** for programmatic access |
+| Cookie Session | `Cookie: limitless_session=...` | **Deprecated** (removal imminent) |
+
+> **DEPRECATION NOTICE**: Cookie-based session authentication is deprecated and will be removed within weeks. Please migrate to API keys immediately.
+
+## API Key Authentication (Recommended)
+
+API keys are the simplest and recommended way to authenticate with the Limitless Exchange API.
+
+### Getting an API Key
+
+1. Log in to [limitless.exchange](https://limitless.exchange) using your wallet
+2. Click your profile menu (top right)
+3. Select "Api keys"
+4. Generate a new key
+
+### Using Your API Key
+
+Include the `X-API-Key` header in all requests:
+
+```python
+import requests
+
+API_URL = "https://api.limitless.exchange"
+
+# All authenticated requests use the X-API-Key header
+headers = {"X-API-Key": "lmts_your_key_here"}
+
+# Example: Get positions
+response = requests.get(f"{API_URL}/portfolio/positions", headers=headers)
+positions = response.json()
+
+# Example: Submit an order
+response = requests.post(f"{API_URL}/orders", json=order_payload, headers=headers)
+```
+
+```javascript
+// JavaScript/TypeScript
+const headers = { 'X-API-Key': 'lmts_your_key_here' };
+
+const res = await fetch('https://api.limitless.exchange/portfolio/positions', { headers });
+const positions = await res.json();
+```
+
+### API Key Authentication Flow Diagram
+
+```
+┌─────────┐                      ┌─────────┐
+│  Client │                      │   API   │
+└────┬────┘                      └────┬────┘
+     │                                │
+     │  Any request                   │
+     │  Header: X-API-Key: lmts_...  │
+     │ ─────────────────────────────> │
+     │                                │
+     │  Response data                 │
+     │ <───────────────────────────── │
+     │                                │
+```
+
+No login flow, no session management, no cookie handling needed.
+
+---
+
+## Cookie-Based Authentication (Deprecated)
+
+> **WARNING**: Cookie-based session authentication is deprecated and will be removed within weeks. Migrate to API keys immediately.
+
+### Legacy Authentication Flow
 
 1. Request a signing message with unique nonce
 2. Sign the message with your Ethereum wallet
 3. Submit the signature to login
 4. Use the session cookie for authenticated requests
 
-## Authentication Flow Diagram
+### Legacy Flow Diagram
 
 ```
 ┌─────────┐                      ┌─────────┐
@@ -201,20 +273,83 @@ def login(private_key, signing_message):
 
 The response includes a `Set-Cookie` header with `limitless_session`.
 
-## Step 4: Use Session Cookie
+## Step 4: Use Session Cookie (Deprecated)
+
+> **Deprecated**: Use API key authentication instead. See [API Key Authentication](#api-key-authentication-recommended) above.
 
 Include the session cookie in authenticated requests.
 
 ```python
+# DEPRECATED - use API key instead
 def get_positions(session_cookie):
     response = requests.get(
         "https://api.limitless.exchange/portfolio/positions",
         cookies={"limitless_session": session_cookie}
     )
     return response.json()
+
+# RECOMMENDED - use API key
+def get_positions(api_key):
+    response = requests.get(
+        "https://api.limitless.exchange/portfolio/positions",
+        headers={"X-API-Key": api_key}
+    )
+    return response.json()
 ```
 
 ## Complete Authentication Module
+
+### Using API Key (Recommended)
+
+```python
+import os
+import requests
+
+class LimitlessClient:
+    """Simple API client using API key authentication."""
+    API_URL = "https://api.limitless.exchange"
+
+    def __init__(self, api_key=None):
+        self.api_key = api_key or os.environ.get('LIMITLESS_API_KEY')
+        if not self.api_key:
+            raise ValueError("API key required. Set LIMITLESS_API_KEY env var or pass api_key parameter.")
+
+    def _headers(self):
+        """Get headers with API key."""
+        return {"X-API-Key": self.api_key}
+
+    def get_positions(self):
+        """Get all portfolio positions."""
+        response = requests.get(f"{self.API_URL}/portfolio/positions", headers=self._headers())
+        response.raise_for_status()
+        return response.json()
+
+    def get_trades(self):
+        """Get trade history."""
+        response = requests.get(f"{self.API_URL}/portfolio/trades", headers=self._headers())
+        response.raise_for_status()
+        return response.json()
+
+    def submit_order(self, order_payload):
+        """Submit a signed order."""
+        response = requests.post(f"{self.API_URL}/orders", json=order_payload, headers=self._headers())
+        response.raise_for_status()
+        return response.json()
+
+    def cancel_order(self, order_id):
+        """Cancel a specific order."""
+        response = requests.delete(f"{self.API_URL}/orders/{order_id}", headers=self._headers())
+        response.raise_for_status()
+        return response.json()
+
+# Usage
+client = LimitlessClient()  # Uses LIMITLESS_API_KEY env var
+positions = client.get_positions()
+```
+
+### Using Cookie Session (Deprecated)
+
+> **WARNING**: This method is deprecated. Migrate to API keys.
 
 ```python
 import os
@@ -223,6 +358,7 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 
 class LimitlessAuth:
+    """DEPRECATED: Use LimitlessClient with API key instead."""
     API_URL = "https://api.limitless.exchange"
 
     def __init__(self, private_key=None):
@@ -299,20 +435,6 @@ class LimitlessAuth:
     def get_cookies(self):
         """Get cookies dict for requests."""
         return {"limitless_session": self.session} if self.session else {}
-
-
-# Usage
-auth = LimitlessAuth()
-session, user = auth.login()
-
-print(f"Logged in as: {user['account']}")
-print(f"User ID: {user['id']}")
-
-# Use for authenticated requests
-response = requests.get(
-    "https://api.limitless.exchange/portfolio/positions",
-    cookies=auth.get_cookies()
-)
 ```
 
 ## Smart Wallet Support
@@ -336,7 +458,41 @@ response = requests.post(
 )
 ```
 
-## Session Management
+## Migration from Cookie to API Key
+
+If you're currently using cookie-based authentication, migrate by:
+
+1. **Generate an API key** via the UI (profile menu → Api keys)
+2. **Replace cookie header with API key header**:
+```diff
+# Before (deprecated)
+- Cookie: limitless_session=your_session_token
+
+# After
++ X-API-Key: lmts_your_key_here
+```
+3. **Remove session management code** - no more login flow or cookie handling needed
+
+### Code Migration Example
+
+```python
+# BEFORE (deprecated cookie auth)
+session_cookie, user = authenticate(private_key)
+response = requests.get(
+    f"{API_URL}/portfolio/positions",
+    cookies={"limitless_session": session_cookie}
+)
+
+# AFTER (API key auth)
+response = requests.get(
+    f"{API_URL}/portfolio/positions",
+    headers={"X-API-Key": "lmts_your_key_here"}
+)
+```
+
+## Session Management (Deprecated)
+
+> **Deprecated**: API key authentication does not require session management.
 
 ### Session Expiration
 
@@ -365,13 +521,14 @@ def ensure_authenticated(auth):
 
 ## Security Best Practices
 
-1. **Never expose private keys**
+1. **Protect API keys**
+   - Store in environment variables (`LIMITLESS_API_KEY`)
+   - Never commit to version control
+   - Rotate keys periodically via the Limitless Exchange UI
+
+2. **Never expose private keys**
    - Use environment variables
    - Never commit to version control
-
-2. **Handle sessions securely**
-   - Store sessions securely if persisting
-   - Clear sessions on logout
 
 3. **Validate addresses**
    - Use checksummed addresses (EIP-55)
@@ -383,17 +540,23 @@ def ensure_authenticated(auth):
 
 ## Troubleshooting
 
+### "Invalid API key"
+
+- Verify the key starts with `lmts_`
+- Check the key was copied correctly without extra whitespace
+- Ensure the key has not been revoked in the UI
+
 ### "Invalid signature"
 
 - Verify message encoding matches API expectation
 - Check signature format has 0x prefix
 - Ensure address is checksummed
 
-### "Session not found"
+### "Session not found" (Deprecated)
 
 - Session may have expired
 - Cookie may not be included in request
-- Re-authenticate
+- Re-authenticate or migrate to API key authentication
 
 ### "Smart wallet required"
 

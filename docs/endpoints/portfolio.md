@@ -4,13 +4,13 @@ Endpoints for accessing user portfolio data including positions, trades, history
 
 ## Authenticated Endpoints
 
-All portfolio endpoints require authentication via session cookie.
+All portfolio endpoints require authentication via `X-API-Key` header (recommended) or session cookie (deprecated).
 
 ### GET /portfolio/positions
 
 Get all active positions with profit/loss data.
 
-**Authentication**: Required (session cookie)
+**Authentication**: Required (`X-API-Key` header or session cookie)
 
 **Response** (200):
 ```json
@@ -99,7 +99,7 @@ for position in positions['clob']:
 
 Get all trades for the authenticated user.
 
-**Authentication**: Required (session cookie)
+**Authentication**: Required (`X-API-Key` header or session cookie)
 
 **Response** (200):
 ```json
@@ -128,7 +128,7 @@ Get all trades for the authenticated user.
 
 Get paginated transaction history.
 
-**Authentication**: Required (session cookie)
+**Authentication**: Required (`X-API-Key` header or session cookie)
 
 **Query Parameters**:
 
@@ -189,7 +189,7 @@ Get paginated transaction history.
 
 Get points breakdown and rewards data.
 
-**Authentication**: Required (session cookie)
+**Authentication**: Required (`X-API-Key` header or session cookie)
 
 **Response** (200):
 ```json
@@ -218,7 +218,7 @@ Get points breakdown and rewards data.
 
 Check USDC spending allowance for the CTF Exchange contract.
 
-**Authentication**: Required (session cookie)
+**Authentication**: Required (`X-API-Key` header or session cookie)
 
 **Response** (200):
 ```json

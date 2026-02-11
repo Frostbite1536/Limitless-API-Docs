@@ -15,7 +15,8 @@ pnpm add viem ethers socket.io-client cross-fetch
 ### Environment Variables
 
 ```bash
-export PRIVATE_KEY="0x..."  # Your wallet private key
+export LIMITLESS_API_KEY="lmts_..."  # Your API key (generate at limitless.exchange)
+export PRIVATE_KEY="0x..."           # Your wallet private key (for order signing)
 export API_URL="https://api.limitless.exchange"
 ```
 
@@ -39,57 +40,21 @@ export API_URL="https://api.limitless.exchange"
 
 ## Complete Trading Example
 
-### 1. Authentication Module (auth.ts)
+### 1. Authentication (auth.ts)
+
+API key authentication is recommended. Generate a key at [limitless.exchange](https://limitless.exchange) (profile menu → Api keys).
 
 ```typescript
-import fetch from 'cross-fetch';
-import { Wallet } from 'ethers';
-
 const API_URL = process.env.API_URL || 'https://api.limitless.exchange';
+const API_KEY = process.env.LIMITLESS_API_KEY;
 
-export async function getSigningMessage(): Promise<string> {
-  const res = await fetch(`${API_URL}/auth/signing-message`);
-  if (!res.ok) throw new Error(`Failed: ${res.status}`);
-  return res.text();
-}
-
-export async function authenticate(privateKey: string) {
-  const wallet = new Wallet(privateKey);
-  const address = await wallet.getAddress();
-
-  // Get and sign message
-  const message = await getSigningMessage();
-  const signature = await wallet.signMessage(message);
-
-  const headers = {
-    'x-account': address,
-    'x-signing-message': `0x${Buffer.from(message, 'utf8').toString('hex')}`,
-    'x-signature': signature.startsWith('0x') ? signature : `0x${signature}`,
-    'content-type': 'application/json',
-    'accept': 'application/json',
-  } as const;
-
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ client: 'eoa' }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Auth failed: ${res.status} ${await res.text()}`);
-  }
-
-  // Extract session cookie
-  const setCookie = res.headers.get('set-cookie') || '';
-  const match = /limitless_session=([^;]+)/i.exec(setCookie);
-  const session = match?.[1];
-
-  if (!session) throw new Error('Session cookie not found');
-
-  const user = await res.json();
-  return { session, user } as const;
+export function getAuthHeaders(): Record<string, string> {
+  if (!API_KEY) throw new Error('LIMITLESS_API_KEY environment variable required');
+  return { 'X-API-Key': API_KEY };
 }
 ```
+
+> **Note**: Cookie-based authentication via `POST /auth/login` is deprecated and will be removed within weeks. Migrate to API keys.
 
 ### 2. Wallet Module (wallet.ts)
 
@@ -210,14 +175,14 @@ export async function submitOrder(
     orderType: 'FOK' | 'GTC';
     marketSlug: string;
   },
-  sessionCookie: string
+  apiKey: string
 ) {
   const res = await fetch(`${API_URL}/orders`, {
     method: 'POST',
     headers: {
       'accept': 'application/json',
       'content-type': 'application/json',
-      'cookie': `limitless_session=${sessionCookie}`,
+      'X-API-Key': apiKey,
     },
     body: JSON.stringify(payload),
   });
@@ -263,15 +228,15 @@ export async function getActiveMarkets(page = 1, limit = 10) {
 ```typescript
 import { io, Socket } from 'socket.io-client';
 
-export function connectToMarkets(session?: string): Socket {
+export function connectToMarkets(apiKey?: string): Socket {
   const url = 'wss://ws.limitless.exchange/markets';
 
   const opts: Parameters<typeof io>[1] = {
     transports: ['websocket'],
   };
 
-  if (session) {
-    opts.extraHeaders = { Cookie: `limitless_session=${session}` };
+  if (apiKey) {
+    opts.extraHeaders = { 'X-API-Key': apiKey };
   }
 
   return io(url, opts);
@@ -317,21 +282,15 @@ async function getMarketCached(slug: string) {
 
 async function main() {
   const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
-  if (!privateKey) {
-    throw new Error('PRIVATE_KEY environment variable required');
-  }
+  const apiKey = process.env.LIMITLESS_API_KEY;
 
-  const API_URL = process.env.API_URL || 'https://api.limitless.exchange';
+  if (!privateKey) throw new Error('PRIVATE_KEY environment variable required');
+  if (!apiKey) throw new Error('LIMITLESS_API_KEY environment variable required');
 
-  // 1. Authenticate
-  console.log('Authenticating...');
-  const { session, user } = await authenticate(privateKey);
-  console.log('Authenticated as:', user.account);
-
-  // 2. Create wallet client
+  // 1. Create wallet client for order signing
   const wallet = createWallet(privateKey);
 
-  // 3. Get market data (cached per market)
+  // 2. Get market data (cached per market)
   const marketSlug = 'btc-100k-2024';
   const market = await getMarketCached(marketSlug);
 
@@ -342,11 +301,11 @@ async function main() {
   // Get token ID (positionIds[0] = YES, positionIds[1] = NO)
   const tokenId = market.positionIds[0];
 
-  // 4. Connect WebSocket for real-time updates
-  const socket = connectToMarkets(session);
+  // 3. Connect WebSocket for real-time updates (pass API key for authenticated streams)
+  const socket = connectToMarkets(apiKey);
   subscribeToOrderbook(socket, [marketSlug]);
 
-  // 5. Create and sign order using venue's exchange address
+  // 4. Create and sign order using venue's exchange address
   console.log('Creating order...');
   const { order, signature } = await createSignedOrder(wallet, {
     amount: '65',  // $65 total
@@ -357,15 +316,15 @@ async function main() {
     verifyingContract: venueExchange,  // From market's venue data
   });
 
-  // 6. Submit order
+  // 5. Submit order with API key
   const orderPayload = {
     order: { ...order, price: 0.65, signature },
-    ownerId: user.id,
+    ownerId: 0,  // Set to your user ID
     orderType: 'GTC' as const,
     marketSlug,
   };
 
-  const result = await submitOrder(orderPayload, session);
+  const result = await submitOrder(orderPayload, apiKey);
   console.log('Order created:', result);
 
   // Keep WebSocket connection alive
@@ -384,7 +343,7 @@ main().catch(console.error);
 npx tsc
 
 # Run with environment variables
-PRIVATE_KEY="0x..." node dist/main.js
+LIMITLESS_API_KEY="lmts_..." PRIVATE_KEY="0x..." node dist/main.js
 ```
 
 ## Common Patterns

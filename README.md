@@ -135,12 +135,24 @@ venue_exchange = market['venue']['exchange']  # Use for EIP-712 signing
 venue_adapter = market['venue']['adapter']    # For NegRisk SELL orders
 ```
 
-### Authentication Flow
+### Authentication
 
-1. `GET /auth/signing-message` - Get nonce
-2. Sign message with wallet
-3. `POST /auth/login` - Get session cookie
-4. Use cookie for authenticated requests
+| Method | Header | Status |
+|--------|--------|--------|
+| API Key | `X-API-Key: lmts_...` | **Required** for programmatic access |
+| Cookie Session | `Cookie: limitless_session=...` | **Deprecated** (removal imminent) |
+
+> **DEPRECATION NOTICE**: Cookie-based session authentication is deprecated and will be removed within weeks. Please migrate to API keys immediately.
+
+#### Getting an API Key
+
+1. Log in to [limitless.exchange](https://limitless.exchange) using your wallet
+2. Click your profile menu (top right) → "Api keys"
+3. Generate a new key
+
+```bash
+curl -H "X-API-Key: lmts_your_key_here" https://api.limitless.exchange/markets
+```
 
 ### Token Approvals
 

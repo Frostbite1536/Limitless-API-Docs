@@ -4,6 +4,26 @@ These are the critical rules for the Limitless Exchange API. If any of these are
 
 ---
 
+## 0. API Key Authentication Required
+
+**INVARIANT**: Programmatic API access MUST use API key authentication via the `X-API-Key` header.
+
+```python
+# CORRECT - API key authentication
+headers = {"X-API-Key": "lmts_your_key_here"}
+response = requests.get(f"{API_URL}/portfolio/positions", headers=headers)
+
+# DEPRECATED - cookie session authentication (removal imminent)
+response = requests.get(f"{API_URL}/portfolio/positions",
+    cookies={"limitless_session": session_cookie})
+```
+
+**Why**: Cookie-based session authentication is deprecated and will be removed within weeks. API keys are generated via the Limitless Exchange UI (profile menu → Api keys).
+
+**Violation symptoms**: 401 errors if using expired/revoked cookies after deprecation removal
+
+---
+
 ## 1. Venue Exchange Address
 
 **INVARIANT**: The `verifyingContract` in EIP-712 signing MUST come from `market.venue.exchange`, fetched via `GET /markets/{slug}`.
@@ -207,6 +227,7 @@ payload = {
 
 When a user reports an issue, verify:
 
+- [ ] Using API key authentication (`X-API-Key` header), not deprecated cookies?
 - [ ] `verifyingContract` from `market.venue.exchange`?
 - [ ] `maker == signer` when `signatureType: 0`?
 - [ ] Wallet never used on Limitless frontend?
@@ -218,3 +239,4 @@ When a user reports an issue, verify:
 - [ ] Token ID from market's `positionIds`?
 - [ ] Amounts scaled to 6 decimals?
 - [ ] GTC orders have `price` field?
+- [ ] Required token approvals set? (BUY: USDC → venue.exchange; SELL NegRisk: CT → venue.exchange AND venue.adapter)

@@ -6,7 +6,7 @@ Endpoints for creating and managing buy/sell orders on CLOB markets.
 
 Before placing orders:
 
-1. **Authentication**: Must be logged in with session cookie
+1. **Authentication**: Required (`X-API-Key` header recommended; session cookie deprecated)
 2. **Fetch Market Data**: Get venue info from `GET /markets/{slug}` (cache per market)
 3. **Token Approvals**: Set up approvals based on order type (see below)
 
@@ -49,7 +49,7 @@ All addresses must use **checksummed format** (EIP-55 mixed-case):
 
 Create a new signed buy or sell order.
 
-**Authentication**: Required (session cookie)
+**Authentication**: Required (`X-API-Key` header or session cookie)
 
 **Request Body**:
 ```json
@@ -133,7 +133,7 @@ fee_rate_bps = user_data.get("rank", {}).get("feeRateBps", 0)
 
 Cancel a specific open order.
 
-**Authentication**: Required (session cookie)
+**Authentication**: Required (`X-API-Key` header or session cookie)
 
 **Path Parameters**:
 
@@ -158,7 +158,7 @@ Cancel a specific open order.
 
 Cancel multiple orders in a single request.
 
-**Authentication**: Required (session cookie)
+**Authentication**: Required (`X-API-Key` header or session cookie)
 
 **Request Body**:
 ```json
@@ -200,7 +200,7 @@ Cancel multiple orders in a single request.
 
 Cancel all open orders for a specific market.
 
-**Authentication**: Required (session cookie)
+**Authentication**: Required (`X-API-Key` header or session cookie)
 
 **Path Parameters**:
 
@@ -293,20 +293,22 @@ taker_amount = int(shares * scaling_factor)  # 100,000,000
 ## Complete Order Flow
 
 ```python
-# 1. Authenticate
-session, user = authenticate(private_key)
-owner_id = user["id"]
-fee_rate_bps = user.get("rank", {}).get("feeRateBps", 0)
+API_KEY = "lmts_your_key_here"
+headers = {"X-API-Key": API_KEY}
 
-# 2. Fetch market data (cache this per market)
+# 1. Fetch market data (cache this per market)
 market = get_market(market_slug)
 venue_exchange = market["venue"]["exchange"]
 token_id = market["positionIds"][0]  # YES token
 
-# 3. Create order with venue's exchange as verifyingContract
+# 2. Create order with venue's exchange as verifyingContract
 order = create_order(maker, token_id, amounts, fee_rate_bps)
 signature = sign_with_eip712(order, venue_exchange)
 
-# 4. Submit
-result = submit_order(order, signature, owner_id, market_slug)
+# 3. Submit with API key
+result = requests.post(
+    f"{API_URL}/orders",
+    json={"order": order, "ownerId": owner_id, "orderType": "GTC", "marketSlug": market_slug},
+    headers=headers
+)
 ```

@@ -57,8 +57,20 @@ See [Smart Contract Addresses](contracts.md) for the complete list of trading ve
 
 ## Authentication Methods
 
-1. **Session Cookie (`limitless_session`)**: Obtained via `/auth/login` using EIP-712 wallet signature
-2. **Bearer JWT Token**: Alternative HTTP Bearer authentication
+| Method | Header | Status |
+|--------|--------|--------|
+| API Key | `X-API-Key: lmts_...` | **Required** for programmatic access |
+| Cookie Session | `Cookie: limitless_session=...` | **Deprecated** (removal imminent) |
+
+> **DEPRECATION NOTICE**: Cookie-based session authentication is deprecated and will be removed within weeks. Migrate to API keys immediately. See [Authentication Guide](guides/authentication.md) for details.
+
+### API Key (Recommended)
+
+Generate an API key via the Limitless Exchange UI (profile menu → Api keys) and include it in all requests:
+
+```bash
+curl -H "X-API-Key: lmts_your_key_here" https://api.limitless.exchange/markets
+```
 
 ## Quick Reference
 

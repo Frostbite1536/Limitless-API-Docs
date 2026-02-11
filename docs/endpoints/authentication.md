@@ -1,8 +1,55 @@
 # Authentication Endpoints
 
-The Limitless Exchange uses wallet-based authentication with EIP-712 signatures. Users sign a message with their Ethereum wallet to prove ownership.
+The Limitless Exchange supports two authentication methods for API access.
 
-## Authentication Flow
+## Authentication Methods
+
+| Method | Header | Status |
+|--------|--------|--------|
+| API Key | `X-API-Key: lmts_...` | **Required** for programmatic access |
+| Cookie Session | `Cookie: limitless_session=...` | **Deprecated** (removal imminent) |
+
+> **DEPRECATION NOTICE**: Cookie-based session authentication is deprecated and will be removed within weeks. Please migrate to API keys immediately. See [Migration Guide](#migration-from-cookie-to-api-key) below.
+
+## API Key Authentication (Recommended)
+
+API keys are the required method for programmatic access to the Limitless Exchange API.
+
+### Getting an API Key
+
+API keys can only be created via the Limitless Exchange UI:
+
+1. Log in to [limitless.exchange](https://limitless.exchange) using your wallet
+2. Click your profile menu (top right)
+3. Select "Api keys"
+4. Generate a new key
+
+### Using Your API Key
+
+Include in all requests via the `X-API-Key` header:
+
+```bash
+# REST API
+curl -H "X-API-Key: lmts_your_key_here" https://api.limitless.exchange/markets
+
+# WebSocket - pass X-API-Key header during connection handshake
+```
+
+```python
+import requests
+
+# All authenticated requests use the X-API-Key header
+response = requests.get(
+    "https://api.limitless.exchange/portfolio/positions",
+    headers={"X-API-Key": "lmts_your_key_here"}
+)
+```
+
+## Cookie-Based Authentication (Deprecated)
+
+> **WARNING**: Cookie-based session authentication is deprecated and will be removed within weeks. Migrate to API keys immediately.
+
+### Legacy Authentication Flow
 
 1. Request a signing message with nonce
 2. Sign the message with your wallet
@@ -153,7 +200,28 @@ response = requests.post(
 )
 ```
 
+## Migration from Cookie to API Key
+
+If you're currently using cookie-based authentication, migrate by:
+
+1. **Generate an API key** via the UI (profile menu → Api keys)
+2. **Replace cookie header with API key header**:
+```diff
+# Before (deprecated)
+- Cookie: limitless_session=your_session_token
+
+# After
++ X-API-Key: lmts_your_key_here
+```
+3. **Remove session management code** - no more login flow or cookie handling needed
+
 ## Security Notes
+
+### API Key Security
+- Store API keys securely using environment variables
+- Never commit API keys to version control
+- Rotate keys periodically via the Limitless Exchange UI
+- Each key provides full account access - treat it like a password
 
 ### Address Format
 - Use checksummed Ethereum addresses (EIP-55)

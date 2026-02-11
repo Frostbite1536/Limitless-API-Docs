@@ -1,5 +1,7 @@
 # Claiming Rewards After Markets Close
 
+> **Auth Update**: Code examples below use cookie-based auth which is **deprecated**. Replace `cookies={"limitless_session": session_cookie}` with `headers={"X-API-Key": "lmts_your_key_here"}`. See [Authentication Guide](../../docs/guides/authentication.md).
+
 **Question**: Is it possible to claim rewards after markets have closed using the Limitless API?
 
 ## Answer

@@ -31,7 +31,8 @@ application {
 ### Environment Variables
 
 ```bash
-export PRIVATE_KEY="0x..."  # Your wallet private key
+export LIMITLESS_API_KEY="lmts_..."  # Your API key (generate at limitless.exchange)
+export PRIVATE_KEY="0x..."           # Your wallet private key (for order signing)
 ```
 
 ## Complete Trading Example
@@ -63,82 +64,16 @@ public class LimitlessTrader {
     private static final Map<String, JsonNode> marketCache = new HashMap<>();
 
     // ========== Authentication ==========
+    // API key authentication is recommended.
+    // Generate a key at limitless.exchange (profile menu → Api keys).
+    // Cookie-based auth via POST /auth/login is DEPRECATED and will be removed.
 
-    public static String getSigningMessage() throws IOException {
-        Request request = new Request.Builder()
-            .url(API_URL + "/auth/signing-message")
-            .get()
-            .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                throw new IOException("Failed: " + response.code());
-            }
-            return response.body().string();
+    private static String getApiKey() {
+        String apiKey = System.getenv("LIMITLESS_API_KEY");
+        if (apiKey == null || apiKey.isEmpty()) {
+            throw new IllegalStateException("LIMITLESS_API_KEY environment variable not set");
         }
-    }
-
-    public static AuthResult authenticate(String privateKey) throws Exception {
-        Credentials credentials = Credentials.create(privateKey);
-        String address = credentials.getAddress();
-
-        // Get signing message
-        String signingMessage = getSigningMessage();
-
-        // Sign message
-        byte[] messageHash = Sign.getEthereumMessageHash(
-            signingMessage.getBytes(StandardCharsets.UTF_8)
-        );
-        Sign.SignatureData signatureData = Sign.signMessage(
-            messageHash, credentials.getEcKeyPair(), false
-        );
-
-        // Format signature
-        byte[] signature = new byte[65];
-        System.arraycopy(signatureData.getR(), 0, signature, 0, 32);
-        System.arraycopy(signatureData.getS(), 0, signature, 32, 32);
-        signature[64] = signatureData.getV()[0];
-        String signatureHex = "0x" + Numeric.toHexStringNoPrefix(signature);
-
-        // Hex encode signing message
-        String messageHex = "0x" + Numeric.toHexStringNoPrefix(
-            signingMessage.getBytes(StandardCharsets.UTF_8)
-        );
-
-        // Login request
-        ObjectNode body = mapper.createObjectNode();
-        body.put("client", "eoa");
-
-        Request request = new Request.Builder()
-            .url(API_URL + "/auth/login")
-            .post(RequestBody.create(
-                mapper.writeValueAsString(body),
-                MediaType.parse("application/json")
-            ))
-            .header("x-account", address)
-            .header("x-signing-message", messageHex)
-            .header("x-signature", signatureHex)
-            .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                throw new IOException("Auth failed: " + response.code());
-            }
-
-            // Extract session cookie
-            String sessionCookie = null;
-            for (Cookie cookie : Cookie.parseAll(
-                request.url(), response.headers()
-            )) {
-                if (cookie.name().equals("limitless_session")) {
-                    sessionCookie = cookie.value();
-                    break;
-                }
-            }
-
-            JsonNode userData = mapper.readTree(response.body().string());
-            return new AuthResult(sessionCookie, userData);
-        }
+        return apiKey;
     }
 
     // ========== Market Data ==========
@@ -266,7 +201,6 @@ public class LimitlessTrader {
     // ========== Order Management ==========
 
     public static JsonNode createOrder(
-        String sessionCookie,
         Map<String, Object> order,
         int ownerId,
         String marketSlug,
@@ -285,7 +219,7 @@ public class LimitlessTrader {
                 mapper.writeValueAsString(payload),
                 MediaType.parse("application/json")
             ))
-            .header("Cookie", "limitless_session=" + sessionCookie)
+            .header("X-API-Key", getApiKey())
             .build();
 
         try (Response response = client.newCall(request).execute()) {
@@ -297,13 +231,13 @@ public class LimitlessTrader {
         }
     }
 
-    public static JsonNode cancelOrder(String sessionCookie, String orderId)
+    public static JsonNode cancelOrder(String orderId)
         throws IOException {
 
         Request request = new Request.Builder()
             .url(API_URL + "/orders/" + orderId)
             .delete()
-            .header("Cookie", "limitless_session=" + sessionCookie)
+            .header("X-API-Key", getApiKey())
             .build();
 
         try (Response response = client.newCall(request).execute()) {
@@ -313,11 +247,11 @@ public class LimitlessTrader {
 
     // ========== Portfolio ==========
 
-    public static JsonNode getPositions(String sessionCookie) throws IOException {
+    public static JsonNode getPositions() throws IOException {
         Request request = new Request.Builder()
             .url(API_URL + "/portfolio/positions")
             .get()
-            .header("Cookie", "limitless_session=" + sessionCookie)
+            .header("X-API-Key", getApiKey())
             .build();
 
         try (Response response = client.newCall(request).execute()) {
@@ -338,12 +272,11 @@ public class LimitlessTrader {
         if (privateKey == null) {
             throw new IllegalStateException("PRIVATE_KEY not set");
         }
+        String apiKey = getApiKey();
 
-        // 1. Authenticate
-        System.out.println("Authenticating...");
-        AuthResult auth = authenticate(privateKey);
-        String makerAddress = auth.userData.get("account").asText();
-        int ownerId = auth.userData.get("id").asInt();
+        // 1. Set up wallet for signing
+        Credentials credentials = Credentials.create(privateKey);
+        String makerAddress = credentials.getAddress();
 
         // 2. Get market data (cached per market)
         System.out.println("Fetching market: " + marketSlug);
@@ -390,21 +323,9 @@ public class LimitlessTrader {
         order.put("signature", signature);
         order.put("price", priceInDollars);
 
-        // 6. Submit order
+        // 6. Submit order with API key
         System.out.println("Submitting order...");
-        return createOrder(auth.sessionCookie, order, ownerId, marketSlug, "GTC");
-    }
-
-    // ========== Helper Classes ==========
-
-    public static class AuthResult {
-        public final String sessionCookie;
-        public final JsonNode userData;
-
-        public AuthResult(String sessionCookie, JsonNode userData) {
-            this.sessionCookie = sessionCookie;
-            this.userData = userData;
-        }
+        return createOrder(order, 0, marketSlug, "GTC");  // Set ownerId to your user ID
     }
 
     // ========== Main ==========
@@ -441,7 +362,7 @@ public class LimitlessTrader {
 ./gradlew build
 
 # Run
-PRIVATE_KEY="0x..." ./gradlew run
+LIMITLESS_API_KEY="lmts_..." PRIVATE_KEY="0x..." ./gradlew run
 
 # Create fat JAR
 ./gradlew fatJar
@@ -502,10 +423,10 @@ public static Map<String, Double> getBestPrices(String slug) throws IOException 
 ### Calculate Portfolio Value
 
 ```java
-public static double calculatePortfolioValue(String sessionCookie)
+public static double calculatePortfolioValue()
     throws IOException {
 
-    JsonNode positions = getPositions(sessionCookie);
+    JsonNode positions = getPositions();
     long totalValue = 0;
 
     JsonNode clob = positions.get("clob");
