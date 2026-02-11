@@ -173,6 +173,26 @@ paths:
           schema:
             example: newest
             type: string
+        - name: tradeType
+          required: false
+          in: query
+          description: Filter by trade type (amm, clob, or group)
+          schema:
+            enum:
+              - amm
+              - clob
+              - group
+            type: string
+        - name: automationType
+          required: false
+          in: query
+          description: Filter by automation type (manual, lumy, or sports)
+          schema:
+            enum:
+              - manual
+              - lumy
+              - sports
+            type: string
         - name: categoryId
           required: false
           in: path
@@ -217,6 +237,26 @@ paths:
           description: Sort by query parameter
           schema:
             example: newest
+            type: string
+        - name: tradeType
+          required: false
+          in: query
+          description: Filter by trade type (amm, clob, or group)
+          schema:
+            enum:
+              - amm
+              - clob
+              - group
+            type: string
+        - name: automationType
+          required: false
+          in: query
+          description: Filter by automation type (manual, lumy, or sports)
+          schema:
+            enum:
+              - manual
+              - lumy
+              - sports
             type: string
         - name: categoryId
           required: false
@@ -578,15 +618,25 @@ paths:
       description: Get all orders placed by the authenticated user for a specific market
       operationId: MarketOrderbookController_getUserOrders
       parameters:
-        - name: status
+        - name: statuses
           required: false
           in: query
-          description: Order status to filter by. Defaults to LIVE if not provided
+          description: Order status(es) to filter by. Defaults to [LIVE] if not provided
           schema:
-            enum:
-              - LIVE
-              - MATCHED
-            type: string
+            type: array
+            items:
+              type: string
+              enum:
+                - LIVE
+                - MATCHED
+        - name: limit
+          required: false
+          in: query
+          description: Maximum number of orders to return
+          schema:
+            minimum: 1
+            example: 100
+            type: number
         - name: slug
           required: true
           in: path
@@ -766,6 +816,33 @@ paths:
       summary: Get Positions
       tags:
         - Portfolio
+  /portfolio/pnl-chart:
+    get:
+      description: "Hybrid PnL: realised series + current total snapshot"
+      operationId: PortfolioController_getPnlChart
+      parameters:
+        - name: timeframe
+          required: false
+          in: query
+          description: Timeframe window for percent change and chart series
+          schema:
+            example: 7d
+            type: string
+      responses:
+        "200":
+          description: PnL chart data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioPnlChartDto"
+        "401":
+          description: Unauthorized
+      security:
+        - bearer: []
+        - limitless_session: []
+      summary: Get portfolio PnL chart
+      tags:
+        - Portfolio
   /portfolio/history:
     get:
       description: Paginated history including AMM, CLOB trades, splits/merges,
@@ -879,6 +956,35 @@ paths:
       summary: Get All User Positions
       tags:
         - Public Portfolio
+  /portfolio/{account}/pnl-chart:
+    get:
+      description: "Hybrid PnL: realised series + current total snapshot"
+      operationId: PublicPortfolioController_getPnlChart
+      parameters:
+        - name: account
+          required: true
+          in: path
+          description: User Ethereum address
+          schema:
+            example: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+            type: string
+        - name: timeframe
+          required: false
+          in: query
+          description: Timeframe window for percent change and chart series
+          schema:
+            example: 7d
+            type: string
+      responses:
+        "200":
+          description: PnL chart data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioPnlChartDto"
+      summary: Get portfolio PnL chart (public)
+      tags:
+        - Public Portfolio
   /portfolio/trading/allowance:
     get:
       description: Check USDC allowance for CLOB or NegRisk trading contracts
@@ -892,6 +998,12 @@ paths:
             enum:
               - clob
               - negrisk
+            type: string
+        - name: spender
+          required: false
+          in: query
+          description: Optional spender address override (e.g., venue exchange address)
+          schema:
             type: string
       responses:
         "200":
@@ -1115,13 +1227,15 @@ info:
 
     **REST API (Trading)**:
 
-    1. **🔐 Authentication**: Sign a message with your wallet to get
-    authenticated  
+    1. **🔐 Authentication**: Use API key for all programmatic access
 
-    2. **📋 Order Creation**: Build and sign orders using EIP-712 structured
+    2. **📊 Fetch Market Data**: Get market info including venue contract
+    addresses (once per market)
+
+    3. **📋 Order Creation**: Build and sign orders using EIP-712 structured
     data
 
-    3. **🚀 Order Submission**: Submit signed orders and receive confirmations
+    4. **🚀 Order Submission**: Submit signed orders and receive confirmations
 
 
     **WebSocket API (Real-Time Data)**:
@@ -1131,6 +1245,147 @@ info:
     2. **📊 Subscriptions**: Subscribe to market prices and position changes
 
     3. **📡 Events**: Handle live market data and transaction updates
+
+
+    ### 🔐 Authentication for API Users
+
+
+    > **⚠️ DEPRECATION NOTICE**: Cookie-based session authentication is
+    deprecated and will be removed within weeks. Please migrate to API keys
+    immediately.
+
+
+    | Method | Header | Status |
+
+    |--------|--------|--------|
+
+    | **API Key** | `X-API-Key: lmts_...` | ✅ Required for programmatic access |
+
+    | Cookie Session | `Cookie: limitless_session=...` | ⚠️ Deprecated (removal
+    imminent) |
+
+
+    **Getting an API Key**
+
+
+    API keys can only be created via the Limitless Exchange UI:
+
+    1. Log in to [limitless.exchange](https://limitless.exchange) using your
+    wallet
+
+    2. Click your profile menu (top right)
+
+    3. Select "Api keys"
+
+    4. Generate a new key
+
+
+    **Using Your API Key**
+
+
+    Include in all requests via the `X-API-Key` header:
+
+
+    ```bash
+
+    # REST API
+
+    curl -H "X-API-Key: lmts_your_key_here"
+    https://api.limitless.exchange/markets
+
+
+    # WebSocket - pass X-API-Key header during connection handshake
+
+    ```
+
+
+    ### Migration from Cookie to API Key
+
+
+    If you're currently using cookie-based authentication, migrate by:
+
+
+    1. **Generate an API key** via the UI (profile menu → Api keys)
+
+    2. **Replace cookie header** with API key header:
+
+
+    ```diff
+
+    # Before (deprecated)
+
+    - Cookie: limitless_session=your_session_token
+
+
+    # After
+
+    + X-API-Key: lmts_your_key_here
+
+    ```
+
+
+    3. **Remove session management code** - no more login flow or cookie
+    handling needed
+
+
+    ### Important: Venue System for CLOB Markets
+
+
+    CLOB markets use a **venue system** where each market is associated with
+    specific contract addresses. Before placing orders:
+
+
+    1. **Fetch market data once**: `GET /markets/:slug` returns venue
+    information
+
+    2. **Use venue.exchange**: This is the `verifyingContract` for EIP-712 order
+    signing
+
+    3. **Cache the venue**: Venue data is static per market - fetch once and
+    reuse
+
+
+    **Sample venue response:**
+
+    ```json
+
+    {
+      "venue": {
+        "exchange": "0xA1b2C3...",
+        "adapter": "0xD4e5F6..."
+      }
+    }
+
+    ```
+
+
+    ### Required Approvals
+
+
+    Before trading, set up token approvals based on order type:
+
+
+    | Order Type | Market Type | Approve To |
+
+    |------------|-------------|------------|
+
+    | BUY | All CLOB | USDC → `venue.exchange` |
+
+    | SELL | Simple CLOB | CT → `venue.exchange` |
+
+    | SELL | NegRisk/Grouped | CT → `venue.exchange` AND `venue.adapter` |
+
+
+    ### Checksummed Addresses
+
+
+    All addresses must use **checksummed format** (EIP-55 mixed-case):
+
+    - Authentication: `x-account` header
+
+    - Orders: `maker` and `signer` fields
+
+    - Example: `0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed`
 
 
     ### Implementation Guides
@@ -1208,14 +1463,102 @@ info:
     The order creation process involves:
 
 
-    1. **Authentication** ✨: Get a signing message and authenticate with your
-    wallet
+    1. **Authentication** ✨: Use API key for all programmatic access
 
-    2. **Order Construction** ✨: Build the order payload with proper parameters
+    2. **Fetch Market Data** ✨: Get venue information from `GET /markets/:slug`
+    (cache per market)
 
-    3. **EIP-712 Signing** ✨: Sign the order using the EIP-712 standard
+    3. **Order Construction** ✨: Build the order payload with proper parameters
 
-    4. **Order Submission** ✨: Submit the signed order to the API
+    4. **EIP-712 Signing** ✨: Sign the order using venue's exchange address as
+    `verifyingContract`
+
+    5. **Order Submission** ✨: Submit the signed order to the API
+
+
+    #### 🔐 Authentication for API Users
+
+
+    > **⚠️ DEPRECATION NOTICE** ✨: Cookie-based session authentication is
+    deprecated and will be removed within weeks. Migrate to API keys
+    immediately.
+
+
+    **Authentication Methods:** ✨
+
+
+    - **API Key** ✨ (header: `X-API-Key: lmts_...`) - Required for programmatic
+    access
+
+    - **Cookie Session** ✨ (header: `Cookie: limitless_session=...`) -
+    Deprecated, removal imminent
+
+
+    **Getting an API Key** ✨:
+
+    API keys can only be created via the UI: Login → profile menu (top right) →
+    Api keys
+
+
+    **Using Your API Key** ✨:
+
+    Include in all requests: `X-API-Key: lmts_your_key_here`
+
+
+    **Note** ✨: Private key is still required for EIP-712 order signing, but API
+    key handles request authentication.
+
+
+    #### Migration from Cookie to API Key
+
+
+    Replace cookie header with API key header:
+
+
+    ```diff
+
+    // 🎯 Copy and customize this example
+
+    #### Before (deprecated)
+
+    - headers["cookie"] = f"limitless_session={session_cookie}"
+
+
+    #### After
+
+    + headers["X-API-Key"] = api_key
+
+    ```
+
+
+    #### Important: Venue System
+
+
+    CLOB markets use a **venue system** ✨ where each market has specific
+    contract addresses. You must:
+
+
+    - Fetch market data via `GET /markets/:slug` to get `venue.exchange` and
+    `venue.adapter`
+
+    - Use `venue.exchange` as the `verifyingContract` in EIP-712 domain
+
+    - Cache venue data per market (it's static and doesn't change)
+
+
+    #### Required Approvals
+
+
+    Before trading, set up token approvals:
+
+
+    - **BUY orders** ✨: Approve USDC to `venue.exchange`
+
+    - **SELL orders (simple CLOB)** ✨: Approve conditional tokens to
+    `venue.exchange`
+
+    - **SELL orders (NegRisk/grouped)** ✨: Approve conditional tokens to
+    **both** ✨ `venue.exchange` AND `venue.adapter`
 
 
     #### Prerequisites
@@ -1335,17 +1678,13 @@ info:
     ============================================================================
 
 
-    #### Contract addresses - Update these with current addresses from
-    environment
-
-    CLOB_ADDRESS = os.getenv("CLOB_CFT_ADDR",
-    "0xa4409D988CA2218d956BeEFD3874100F444f0DC3")
-
-    NEGRISK_ADDRESS = os.getenv(
-        "NEGRISK_CFT_ADDR", "0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6"
-    )
-
     API_BASE_URL = os.getenv("API_URL", "https://api.limitless.exchange")
+
+
+    #### Market cache - stores venue data per market slug (venue is static per
+    market)
+
+    MARKET_CACHE = {}
 
 
     #### EIP-712 Type Definitions
@@ -1386,6 +1725,59 @@ info:
     ####
     ============================================================================
 
+    #### Market Data Functions
+
+    ####
+    ============================================================================
+
+
+
+    def get_market_data(slug):
+        """
+        Fetch market data including venue information.
+        Uses cache to avoid repeated API calls (venue is static per market).
+
+        Args:
+            slug: The market slug
+
+        Returns:
+            dict: Market data including venue, tokens, etc.
+        """
+        if slug in MARKET_CACHE:
+            print(f"📦 Using cached market data for: {slug}")
+            return MARKET_CACHE[slug]
+
+        print(f"📊 Fetching market data for: {slug}")
+        response = requests.get(f"{API_BASE_URL}/markets/{slug}")
+        if response.status_code == 200:
+            market = response.json()
+            MARKET_CACHE[slug] = market
+            print(f"✅ Market data cached. Venue exchange: {market.get('venue', {}).get('exchange')}")
+            return market
+        else:
+            raise Exception(f"Failed to get market data: {response.status_code} - {response.text}")
+
+
+    def get_venue_exchange(slug):
+        """
+        Get the venue exchange address for a market (used as verifyingContract).
+
+        Args:
+            slug: The market slug
+
+        Returns:
+            str: The venue exchange address (checksummed)
+        """
+        market = get_market_data(slug)
+        venue = market.get("venue")
+        if not venue or not venue.get("exchange"):
+            raise Exception(f"Market {slug} does not have venue data")
+        return venue["exchange"]
+
+
+    ####
+    ============================================================================
+
     #### Authentication Functions
 
     ####
@@ -1417,6 +1809,20 @@ info:
 
         Returns:
             tuple: (session_cookie, user_data)
+
+        Note:
+            The address must be checksummed (EIP-55 format).
+            eth_account.Account.from_key() returns checksummed addresses by default.
+
+            TIP: Session cookie is valid for ~30 days. Consider saving to file and secure it! :
+            # Save after authentication:
+            # with open('.session_cookie.json', 'w') as f:
+            #     json.dump({'cookie': session_cookie, 'user_data': user_data}, f)
+            #
+            # Load on subsequent runs:
+            # with open('.session_cookie.json', 'r') as f:
+            #     saved = json.load(f)
+            #     session_cookie, user_data = saved['cookie'], saved['user_data']
         """
         hex_message = "0x" + signing_message.encode("utf-8").hex()
 
@@ -1424,9 +1830,10 @@ info:
         if not private_key.startswith("0x"):
             private_key = "0x" + private_key
         account = Account.from_key(private_key)
+        # account.address is already checksummed (EIP-55 format)
         ethereum_address = account.address
 
-        print(f"Using address: {ethereum_address}")
+        print(f"Using address (checksummed): {ethereum_address}")
         print(f"Signing message: {repr(signing_message)}")
 
         # Sign the message
@@ -1436,6 +1843,7 @@ info:
         if not sig_hex.startswith("0x"):
             sig_hex = "0x" + sig_hex
 
+        # x-account must be checksummed address
         headers = {
             "x-account": ethereum_address,
             "x-signing-message": hex_message,
@@ -1500,32 +1908,31 @@ info:
         }
 
 
-    def get_eip712_domain(market_type="CLOB"):
+    def get_eip712_domain(venue_exchange_address):
         """
         Get the EIP-712 domain for signing.
 
         Args:
-            market_type: 'CLOB' or 'NEGRISK'
+            venue_exchange_address: The venue's exchange contract address from market data
 
         Returns:
             dict: EIP-712 domain object
         """
-        contract_address = CLOB_ADDRESS if market_type == "CLOB" else NEGRISK_ADDRESS
         return {
             "name": "Limitless CTF Exchange",
             "version": "1",
             "chainId": 8453,  # Base chain ID
-            "verifyingContract": contract_address,
+            "verifyingContract": venue_exchange_address,
         }
 
 
-    def create_signature_for_order_payload(market_type, order_payload,
-    private_key):
+    def create_signature_for_order_payload(venue_exchange_address,
+    order_payload, private_key):
         """
         Sign an order payload using EIP-712.
 
         Args:
-            market_type: 'CLOB' or 'NEGRISK'
+            venue_exchange_address: The venue's exchange address (verifyingContract)
             order_payload: The order data to sign
             private_key: Private key for signing
 
@@ -1539,8 +1946,8 @@ info:
         # Create account
         account = Account.from_key("0x" + private_key)
 
-        # Get domain data
-        domain_data = get_eip712_domain(market_type)
+        # Get domain data using venue's exchange address
+        domain_data = get_eip712_domain(venue_exchange_address)
 
         # Convert string fields to int for signing
         message_data = {
@@ -1575,13 +1982,14 @@ info:
         return "0x" + signature
 
 
-    def create_order_api(order_payload, session_cookie):
+    def create_order_api(order_payload, api_key=None, session_cookie=None):
         """
         Submit an order to the API.
 
         Args:
             order_payload: Complete order payload with signature
-            session_cookie: Authentication session cookie
+            api_key: API key for authentication (recommended)
+            session_cookie: Authentication session cookie (deprecated)
 
         Returns:
             dict: API response with order details
@@ -1589,10 +1997,18 @@ info:
         api_url = f"{API_BASE_URL}/orders"
 
         headers = {
-            "cookie": f"limitless_session={session_cookie}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
+
+        # Prefer API key over session cookie
+        if api_key:
+            headers["X-API-Key"] = api_key
+        elif session_cookie:
+            print("⚠️  Using deprecated cookie auth. Please migrate to API keys.")
+            headers["cookie"] = f"limitless_session={session_cookie}"
+        else:
+            raise Exception("Authentication required: provide api_key or session_cookie")
 
         print(f"Order payload: {json.dumps(order_payload, indent=2)}")
 
@@ -1625,7 +2041,8 @@ info:
 
 
 
-    def execute_trade(trading_params, market_data, private_key):
+    def execute_trade(trading_params, market_slug, session_cookie, user_data,
+    private_key):
         """
         Main function to execute a trade on Limitless Exchange.
 
@@ -1635,20 +2052,37 @@ info:
                 - amount: amount in shares (e.g., 100)
                 - firstType: "YES" or "NO"
 
-            market_data: Dictionary containing:
-                - tokens: {"yes": "token_id_yes", "no": "token_id_no"}
-                - slug: "market-slug"
+            market_slug: The market slug (used to fetch market data including venue)
 
-            private_key: Your wallet's private key
+            session_cookie: Session cookie from authenticate() - REQUIRED
+            user_data: User data from authenticate() - REQUIRED
+            private_key: Your wallet's private key (for order signing only)
 
         Returns:
             dict: Order execution result
+
+        Note:
+            You MUST authenticate before calling this function:
+
+            signing_message = get_signing_message()
+            session_cookie, user_data = authenticate(private_key, signing_message)
+
+            TIP: Session cookie is valid for ~30 days. Save to file and reuse:
+            # Save after first auth:
+            # with open('.session_cookie.json', 'w') as f:
+            #     json.dump({'cookie': session_cookie, 'user_data': user_data}, f)
+            #
+            # Load on subsequent runs:
+            # with open('.session_cookie.json', 'r') as f:
+            #     saved = json.load(f)
+            #     session_cookie, user_data = saved['cookie'], saved['user_data']
         """
 
-        # Step 1: Authenticate
-        signing_message = get_signing_message()
-        session_cookie, user_data = authenticate(private_key, signing_message)
-        print(f"Authenticated as: {user_data['account']}")
+        # Step 1: Fetch market data (cached per market)
+        # This gets venue info needed for EIP-712 signing
+        market_data = get_market_data(market_slug)
+        venue_exchange = market_data["venue"]["exchange"]
+        print(f"Using venue exchange: {venue_exchange}")
 
         # Step 2: Calculate amounts
         price_in_cents = trading_params["sharePrice"]
@@ -1656,11 +2090,16 @@ info:
         trade_type = "GTC"  # Good Till Cancelled
         scaling_factor = 1000000  # 1e6 for USDC (6 decimals)
 
-        # Select token based on YES/NO choice
+        # Get token IDs from market data
+        # positionIds[0] = YES token, positionIds[1] = NO token
+        position_ids = market_data.get("positionIds", [])
+        if len(position_ids) < 2:
+            raise Exception("Market does not have valid position IDs")
+
         first_user_token = (
-            market_data["tokens"]["yes"]
+            position_ids[0]
             if trading_params["firstType"] == "YES"
-            else market_data["tokens"]["no"]
+            else position_ids[1]
         )
 
         # Calculate amounts
@@ -1677,6 +2116,7 @@ info:
         print(f"Taker amount: {taker_amount}")
 
         # Step 3: Create order payload without signature
+        # user_data["account"] is already checksummed
         order_payload_without_signature = create_order_payload_without_signature(
             user_data["account"],
             first_user_token,
@@ -1685,9 +2125,9 @@ info:
             user_data.get("rank", {}).get("feeRateBps", 0),
         )
 
-        # Step 4: Sign the order
+        # Step 4: Sign the order using venue's exchange address
         signature = create_signature_for_order_payload(
-            "CLOB", order_payload_without_signature, private_key
+            venue_exchange, order_payload_without_signature, private_key
         )
 
         # Step 5: Create final order payload
@@ -1699,7 +2139,7 @@ info:
             },
             "ownerId": user_data["id"],
             "orderType": trade_type,
-            "marketSlug": market_data["slug"],
+            "marketSlug": market_slug,
         }
 
         print(
@@ -1731,18 +2171,13 @@ info:
 
         # Example parameters - REPLACE THESE WITH YOUR ACTUAL VALUES
         trading_params = {
-            "sharePrice": 50,  # Price in cents (65¢)
+            "sharePrice": 50,  # Price in cents (50¢)
             "amount": 2,  # Number of shares
             "firstType": "YES",  # 'YES' or 'NO'
         }
 
-        market_data = {
-            "tokens": {
-                "yes": "<REPLACE_WITH_YES_TOKEN_ID>",  # Replace with actual YES token ID,
-                "no": "<REPLACE_WITH_NO_TOKEN_ID>",  # Replace with actual NO token ID
-            },
-            "slug": "example-market-slug",  # Replace with actual market slug
-        }
+        # Market slug - the script will fetch market data (including venue and tokens) automatically
+        market_slug = "example-market-slug"  # Replace with actual market slug
 
         # SECURITY WARNING: Never hardcode your private key!
         # Use environment variables or secure key management
@@ -1757,13 +2192,45 @@ info:
 
         print("🚀 Starting trading script...")
         print(f"Trading parameters: {trading_params}")
-        print(f"Market: {market_data['slug']}")
+        print(f"Market slug: {market_slug}")
 
         try:
-            # Execute the trade
-            result = execute_trade(trading_params, market_data, private_key)
+            # Step 1: Authenticate (or load from saved file)
+            # TIP: Read cookie from saved file as it lasts 30 days
+            # import json
+            # try:
+            #     with open('.session_cookie.json', 'r') as f:
+            #         saved = json.load(f)
+            #         session_cookie = saved['cookie']
+            #         user_data = saved['user_data']
+            #         print("✅ Loaded session from file")
+            # except FileNotFoundError:
+            #     signing_message = get_signing_message()
+            #     session_cookie, user_data = authenticate(private_key, signing_message)
+            #     # Save for reuse:
+            #     with open('.session_cookie.json', 'w') as f:
+            #         json.dump({'cookie': session_cookie, 'user_data': user_data}, f)
+            #     print("💾 Session saved to file")
+
+            # For demo, authenticate each time (you should save/load from file):
+            signing_message = get_signing_message()
+            session_cookie, user_data = authenticate(private_key, signing_message)
+            print(f"✅ Authenticated as: {user_data['account']}")
+
+            # Step 2: Execute trade with authenticated session
+            # Market data (including venue) is fetched and cached automatically
+            result = execute_trade(
+                trading_params,
+                market_slug,
+                session_cookie,
+                user_data,
+                private_key
+            )
             print("\n✅ Trade executed successfully!")
             print(f"Result: {json.dumps(result, indent=2)}")
+
+            # You can execute more trades with the same session:
+            # result2 = execute_trade(other_params, market_slug, session_cookie, user_data, private_key)
 
         except Exception as e:
             print(f"\n❌ Error executing trade: {e}")
@@ -1788,6 +2255,61 @@ info:
     - Always test with small amounts first
 
     - Understand the code before using it with real funds
+
+
+    #### Authentication Flow
+
+
+    **IMPORTANT** ✨: You must authenticate BEFORE calling `execute_trade()`. The
+    function requires a valid session.
+
+
+    ```python
+
+    // 🎯 Copy and customize this example
+
+    #### Step 1: Authenticate (do this once)
+
+    signing_message = get_signing_message()
+
+    session_cookie, user_data = authenticate(private_key, signing_message)
+
+
+    #### Step 2: Execute trade(s) with the session
+
+    result = execute_trade(trading_params, market_slug, session_cookie,
+    user_data, private_key)
+
+
+    #### You can execute multiple trades with the same session:
+
+    result2 = execute_trade(other_params, market_slug, session_cookie,
+    user_data, private_key)
+
+    ```
+
+
+    #### Session Reuse (Recommended)
+
+
+    Session cookies are valid for ~30 days. To avoid repeated authentication,
+    consider saving the session to a file after first authentication and loading
+    it on subsequent runs.
+
+
+    **Recommendations** ✨:
+
+
+    - Use `json.dump()` to save `session_cookie` and `user_data` after
+    authentication
+
+    - Use `json.load()` to read the saved session on subsequent runs
+
+    - Handle `FileNotFoundError` when session file doesn't exist
+
+    - Add session file to `.gitignore` to prevent committing sensitive data
+
+    - Set restrictive file permissions: `chmod 600 .session_cookie.json`
 
 
     #### Order Types
@@ -1856,20 +2378,27 @@ info:
 
     // 🎯 Copy and customize this example
 
-    #### Required
+    #### Recommended: API key for request authentication
 
-    export PRIVATE_KEY="0x..."  # Your wallet private key
+    export API_KEY="lmts_..."     # Your API key (generate via UI: profile menu
+    → Api keys)
+
+
+    #### Required: For EIP-712 order signing
+
+    export PRIVATE_KEY="0x..."    # Your wallet private key
 
 
     #### Optional (defaults shown)
 
     export API_URL="https://api.limitless.exchange"
 
-    export CLOB_CFT_ADDR="0xa4409D988CA2218d956BeEFD3874100F444f0DC3"
-
-    export NEGRISK_CFT_ADDR="0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6"
-
     ```
+
+
+    **Note** ✨: Contract addresses (exchange, adapter) are now fetched
+    dynamically from the market's venue data via `GET /markets/:slug`. You no
+    longer need to configure them as environment variables.
 
 
     #### Troubleshooting
@@ -1879,23 +2408,21 @@ info:
 
 
     1. **ImportError for encode_typed_data** ✨
-
        - Solution: Upgrade eth-account: `pip install eth-account==0.10.0 `
 
     2. **Authentication Failed** ✨
-
        - Check that your private key is correct
        - Ensure you're using the correct format (with or without '0x' prefix)
 
     3. **Order Creation Failed** ✨
-
        - Verify market slug and token IDs are correct
        - Check that you have sufficient balance
        - Ensure the market is still open
 
     4. **Signature Verification Failed** ✨
-       - Make sure you're using the correct contract address
+       - Ensure you're using the venue's exchange address from market data
        - Verify the chain ID matches (8453 for Base)
+       - Make sure addresses are checksummed (EIP-55 format)
 
     #### Disclaimer
 
@@ -1923,7 +2450,7 @@ info:
 
 
 
-    _Last updated: 2025-08-14_
+    _Last updated: 2026-02-03_
 
 
 
@@ -1968,13 +2495,47 @@ info:
 
 
     1. **Authentication** ✨: Get a signing message and authenticate with your
-    wallet
+    wallet (use checksummed addresses)
 
-    2. **Order Construction** ✨: Build the order payload with proper parameters
+    2. **Fetch Market Data** ✨: Get venue information from `GET /markets/:slug`
+    (cache per market)
 
-    3. **EIP-712 Signing** ✨: Sign the order using the EIP-712 standard
+    3. **Order Construction** ✨: Build the order payload with proper parameters
 
-    4. **Order Submission** ✨: Submit the signed order to the API
+    4. **EIP-712 Signing** ✨: Sign the order using venue's exchange address as
+    `verifyingContract`
+
+    5. **Order Submission** ✨: Submit the signed order to the API
+
+
+    #### Important: Venue System
+
+
+    CLOB markets use a **venue system** ✨ where each market has specific
+    contract addresses. You must:
+
+
+    - Fetch market data via `GET /markets/:slug` to get `venue.exchange` and
+    `venue.adapter`
+
+    - Use `venue.exchange` as the `verifyingContract` in EIP-712 domain
+
+    - Cache venue data per market (it's static and doesn't change)
+
+
+    #### Required Approvals
+
+
+    Before trading, set up token approvals:
+
+
+    - **BUY orders** ✨: Approve USDC to `venue.exchange`
+
+    - **SELL orders (simple CLOB)** ✨: Approve conditional tokens to
+    `venue.exchange`
+
+    - **SELL orders (NegRisk/grouped)** ✨: Approve conditional tokens to
+    **both** ✨ `venue.exchange` AND `venue.adapter`
 
 
     #### Project Setup
@@ -2196,13 +2757,10 @@ info:
         private static final String API_BASE_URL = System.getenv("API_URL") != null ?
             System.getenv("API_URL") : "https://api.limitless.exchange";
 
-        private static final String CLOB_ADDRESS = System.getenv("CLOB_CFT_ADDR") != null ?
-            System.getenv("CLOB_CFT_ADDR") : "0xa4409D988CA2218d956BeEFD3874100F444f0DC3";
-
-        private static final String NEGRISK_ADDRESS = System.getenv("NEGRISK_CFT_ADDR") != null ?
-            System.getenv("NEGRISK_CFT_ADDR") : "0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6";
-
         private static final int CHAIN_ID = 8453; // Base chain ID
+
+        // Market cache - stores market data per slug (venue is static per market)
+        private static final Map<String, JsonNode> MARKET_CACHE = new HashMap<>();
 
         // HTTP client with cookie support
         private static final CookieManager cookieManager = new CookieManager();
@@ -2228,15 +2786,6 @@ info:
             }
         }
 
-        public static class MarketData {
-            public final Map<String, String> tokens; // yes/no token IDs
-            public final String slug;                // Market slug
-
-            public MarketData(Map<String, String> tokens, String slug) {
-                this.tokens = tokens;
-                this.slug = slug;
-            }
-        }
 
         public static class AuthResult {
             public final String sessionCookie;
@@ -2254,6 +2803,54 @@ info:
 
         private static String stringToHex(String text) {
             return "0x" + Numeric.toHexStringNoPrefix(text.getBytes(StandardCharsets.UTF_8));
+        }
+
+        // ============================================================================
+        // Market Data Functions
+        // ============================================================================
+
+        /**
+         * Fetch market data including venue information.
+         * Uses cache to avoid repeated API calls (venue is static per market).
+         */
+        private static JsonNode getMarketData(String slug) throws IOException {
+            if (MARKET_CACHE.containsKey(slug)) {
+                logger.info("Using cached market data for: {}", slug);
+                return MARKET_CACHE.get(slug);
+            }
+
+            logger.info("Fetching market data for: {}", slug);
+
+            Request request = new Request.Builder()
+                .url(API_BASE_URL + "/markets/" + slug)
+                .get()
+                .build();
+
+            try (Response response = httpClient.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    throw new IOException("Failed to get market data: " + response.code() + " - " + response.body().string());
+                }
+
+                JsonNode market = objectMapper.readTree(response.body().string());
+                MARKET_CACHE.put(slug, market);
+
+                String venueExchange = market.path("venue").path("exchange").asText(null);
+                logger.info("Market data cached. Venue exchange: {}", venueExchange);
+
+                return market;
+            }
+        }
+
+        /**
+         * Get the venue exchange address for a market (used as verifyingContract).
+         */
+        private static String getVenueExchange(String slug) throws IOException {
+            JsonNode market = getMarketData(slug);
+            JsonNode venue = market.get("venue");
+            if (venue == null || venue.get("exchange") == null) {
+                throw new IOException("Market " + slug + " does not have venue data");
+            }
+            return venue.get("exchange").asText();
         }
 
         // ============================================================================
@@ -2378,27 +2975,35 @@ info:
         // EIP-712 Signing
         // ============================================================================
 
-        private static Map<String, Object> getEip712Domain(String marketType) {
-            String contractAddress = "CLOB".equals(marketType) ? CLOB_ADDRESS : NEGRISK_ADDRESS;
-
+        /**
+         * Get the EIP-712 domain for signing.
+         * @param venueExchangeAddress The venue's exchange contract address from market data
+         */
+        private static Map<String, Object> getEip712Domain(String venueExchangeAddress) {
             Map<String, Object> domain = new LinkedHashMap<>();
             domain.put("name", "Limitless CTF Exchange");
             domain.put("version", "1");
             domain.put("chainId", CHAIN_ID);
-            domain.put("verifyingContract", contractAddress);
+            domain.put("verifyingContract", venueExchangeAddress);
 
             return domain;
         }
 
+        /**
+         * Sign an order payload using EIP-712.
+         * @param venueExchangeAddress The venue's exchange address (verifyingContract)
+         * @param orderPayload The order data to sign
+         * @param privateKey Private key for signing
+         */
         private static String createSignatureForOrderPayload(
-                String marketType,
+                String venueExchangeAddress,
                 Map<String, Object> orderPayload,
                 String privateKey) throws Exception {
 
             logger.info("Creating EIP-712 signature...");
 
             Credentials credentials = Credentials.create(privateKey);
-            Map<String, Object> domain = getEip712Domain(marketType);
+            Map<String, Object> domain = getEip712Domain(venueExchangeAddress);
 
             // Convert for signing (tokenId and expiration to BigInteger)
             Map<String, Object> signingPayload = new LinkedHashMap<>(orderPayload);
@@ -2507,7 +3112,13 @@ info:
         // Main Trading Function
         // ============================================================================
 
-        public static JsonNode executeTrade(TradingParams tradingParams, MarketData marketData, String privateKey)
+        /**
+         * Main function to execute a trade on Limitless Exchange.
+         * @param tradingParams Trading parameters (price, amount, type)
+         * @param marketSlug The market slug (used to fetch market data including venue)
+         * @param privateKey Your wallet's private key
+         */
+        public static JsonNode executeTrade(TradingParams tradingParams, String marketSlug, String privateKey)
                 throws Exception {
 
             logger.info("=" + "=".repeat(79));
@@ -2518,15 +3129,27 @@ info:
             String signingMessage = getSigningMessage();
             AuthResult authResult = authenticate(privateKey, signingMessage);
 
-            // Step 2: Calculate amounts
+            // Step 2: Fetch market data (cached per market)
+            // This gets venue info needed for EIP-712 signing
+            JsonNode marketData = getMarketData(marketSlug);
+            String venueExchange = marketData.path("venue").path("exchange").asText();
+            logger.info("Using venue exchange: {}", venueExchange);
+
+            // Step 3: Calculate amounts
             int priceInCents = tradingParams.firstPrice;
             int amount = tradingParams.amount;
             String tradeType = "GTC"; // Good Till Cancelled
             long scalingFactor = 1000000L; // 1e6 for USDC (6 decimals)
 
-            // Select token based on YES/NO choice
+            // Get token IDs from market data
+            // positionIds[0] = YES token, positionIds[1] = NO token
+            JsonNode positionIds = marketData.get("positionIds");
+            if (positionIds == null || positionIds.size() < 2) {
+                throw new Exception("Market does not have valid position IDs");
+            }
+
             String selectedToken = "YES".equals(tradingParams.firstType) ?
-                marketData.tokens.get("yes") : marketData.tokens.get("no");
+                positionIds.get(0).asText() : positionIds.get(1).asText();
 
             // Calculate amounts
             double priceInDollars = priceInCents / 100.0;
@@ -2540,7 +3163,8 @@ info:
             logger.info("Maker amount: {}", makerAmount);
             logger.info("Taker amount: {}", takerAmount);
 
-            // Step 3: Create order payload without signature
+            // Step 4: Create order payload without signature
+            // authResult.userData.get("account") is already checksummed
             String makerAddress = authResult.userData.get("account").asText();
             int feeRateBps = authResult.userData.path("rank").path("feeRateBps").asInt(0);
 
@@ -2552,10 +3176,10 @@ info:
                 feeRateBps
             );
 
-            // Step 4: Sign the order
-            String signature = createSignatureForOrderPayload("CLOB", orderPayload, privateKey);
+            // Step 5: Sign the order using venue's exchange address
+            String signature = createSignatureForOrderPayload(venueExchange, orderPayload, privateKey);
 
-            // Step 5: Create final order payload
+            // Step 6: Create final order payload
             Map<String, Object> finalOrderPayload = new LinkedHashMap<>();
             Map<String, Object> orderWithSignature = new LinkedHashMap<>(orderPayload);
             orderWithSignature.put("price", priceInDollars);
@@ -2564,12 +3188,12 @@ info:
             finalOrderPayload.put("order", orderWithSignature);
             finalOrderPayload.put("ownerId", authResult.userData.get("id").asInt());
             finalOrderPayload.put("orderType", tradeType);
-            finalOrderPayload.put("marketSlug", marketData.slug);
+            finalOrderPayload.put("marketSlug", marketSlug);
 
             logger.info("Order placed for {} cents, amount: {}, share type: {}",
                 priceInCents, amount, tradingParams.firstType);
 
-            // Step 6: Submit to API
+            // Step 7: Submit to API
             return createOrderApi(finalOrderPayload, authResult.sessionCookie);
         }
 
@@ -2590,19 +3214,13 @@ info:
             try {
                 // Example parameters - REPLACE THESE WITH YOUR ACTUAL VALUES
                 TradingParams tradingParams = new TradingParams(
-                    65,    // Price in cents (65¢)
-                    100,   // Number of shares
+                    50,    // Price in cents (50¢)
+                    2,     // Number of shares
                     "YES"  // "YES" or "NO"
                 );
 
-                Map<String, String> tokens = new HashMap<>();
-                tokens.put("yes", "<REPLACE_WITH_YES_TOKEN_ID>");  // Replace with actual YES token ID
-                tokens.put("no", "<REPLACE_WITH_NO_TOKEN_ID>");    // Replace with actual NO token ID
-
-                MarketData marketData = new MarketData(
-                    tokens,
-                    "example-market-slug"  // Replace with actual market slug
-                );
+                // Market slug - the script will fetch market data (including venue and tokens) automatically
+                String marketSlug = "example-market-slug";  // Replace with actual market slug
 
                 // SECURITY WARNING: Never hardcode your private key!
                 // Use environment variables or secure key management
@@ -2619,10 +3237,11 @@ info:
                     tradingParams.amount + " shares at " +
                     tradingParams.firstPrice + " cents for " +
                     tradingParams.firstType);
-                System.out.println("Market: " + marketData.slug);
+                System.out.println("Market slug: " + marketSlug);
 
                 // Execute the trade
-                JsonNode result = executeTrade(tradingParams, marketData, privateKey);
+                // Market data (including venue) is fetched and cached automatically
+                JsonNode result = executeTrade(tradingParams, marketSlug, privateKey);
 
                 System.out.println("\n✅ Trade executed successfully!");
                 System.out.println("Result: " + objectMapper.writerWithDefaultPrettyPrinter()
@@ -2769,11 +3388,12 @@ info:
 
     export API_URL="https://api.limitless.exchange"
 
-    export CLOB_CFT_ADDR="0xa4409D988CA2218d956BeEFD3874100F444f0DC3"
-
-    export NEGRISK_CFT_ADDR="0x5a38afc17F7E97ad8d6C547ddb837E40B4aEDfC6"
-
     ```
+
+
+    **Note** ✨: Contract addresses (exchange, adapter) are now fetched
+    dynamically from the market's venue data via `GET /markets/:slug`. You no
+    longer need to configure them as environment variables.
 
 
     #### Troubleshooting
@@ -2783,26 +3403,24 @@ info:
 
 
     1. **Build Failures** ✨
-
        - Ensure Java 11+ is installed
        - Check internet connection for dependency downloads
        - Clear Gradle cache: `./gradlew clean`
 
     2. **Authentication Failed** ✨
-
        - Verify private key format (with or without '0x' prefix)
        - Check API endpoint accessibility
        - Ensure signing message is current
 
     3. **Order Creation Failed** ✨
-
        - Verify market slug and token IDs
        - Check account balance
        - Ensure market is still open
 
     4. **Signature Verification Failed** ✨
-       - Verify contract addresses match
+       - Ensure you're using the venue's exchange address from market data
        - Check chain ID (8453 for Base)
+       - Make sure addresses are checksummed (use `Keys.toChecksumAddress()`)
        - Ensure Web3j version compatibility
 
     #### Key Features
@@ -2847,7 +3465,7 @@ info:
 
 
 
-    _Last updated: 2025-08-14_
+    _Last updated: 2025-12-16_
 
 
 
@@ -2892,6 +3510,41 @@ info:
     Production API URL: `https://api.limitless.exchange`
 
 
+    #### Important: Venue System for CLOB Markets
+
+
+    CLOB markets use a **venue system** ✨ where each market has specific
+    contract addresses. Before placing orders:
+
+
+    1. **Fetch market data once** ✨: `GET /markets/:slug` returns venue
+    information
+
+    2. **Use venue.exchange** ✨: This is the `verifyingContract` for EIP-712
+    order signing
+
+    3. **Cache the venue** ✨: Venue data is static per market - fetch once and
+    reuse
+
+
+    **Required Approvals:** ✨
+
+
+    - **BUY orders** ✨: Approve USDC to `venue.exchange`
+
+    - **SELL orders (simple CLOB)** ✨: Approve conditional tokens to
+    `venue.exchange`
+
+    - **SELL orders (NegRisk/grouped)** ✨: Approve conditional tokens to
+    **both** ✨ `venue.exchange` AND `venue.adapter`
+
+
+    **Checksummed Addresses:** ✨
+
+    All addresses must use checksummed format (EIP-55). Use `getAddress()` from
+    viem to ensure proper formatting.
+
+
     #### Prerequisites
 
 
@@ -2920,18 +3573,67 @@ info:
 
     // 🎯 Copy and customize this example
 
-    export PRIVATE_KEY="0x..."     # Your wallet private key
+    export API_KEY="lmts_..."      # Your API key (recommended)
+
+    export PRIVATE_KEY="0x..."     # Your wallet private key (for order signing)
 
     export API_URL="https://api.limitless.exchange"
 
     ```
 
 
+    #### 🔐 Authentication for API Users
+
+
+    > **⚠️ DEPRECATION NOTICE** ✨: Cookie-based session authentication is
+    deprecated and will be removed within weeks. Migrate to API keys
+    immediately.
+
+
+    **Getting an API Key** ✨:
+
+    API keys can only be created via the UI: Login → profile menu (top right) →
+    Api keys
+
+
+    **Using Your API Key** ✨:
+
+
+    - REST: Include `X-API-Key` header in all requests
+
+    - WebSocket: Pass `X-API-Key` header during connection handshake
+
+
+    #### Migration from Cookie to API Key
+
+
+    Replace cookie with API key header:
+
+
+    ```diff
+
+    // 🎯 Copy and customize this example
+
+    #### REST API
+
+    - Cookie: limitless_session=your_session
+
+    + X-API-Key: lmts_your_key_here
+
+
+    #### WebSocket (extraHeaders)
+
+    - { Cookie: `limitless_session=${session}` }
+
+    + { 'X-API-Key': apiKey }
+
+    ```
+
+
     **⚠️ Security Warning:** ✨  
 
-    Storing private keys in `.env` files is **dangerous** ✨ and should only be
-    used for development/testing purposes. For production environments, use
-    proper secret management services.
+    Store API keys and private keys securely. Never commit them to version
+    control. For production, use proper secret management services.
 
 
 
@@ -2946,50 +3648,88 @@ info:
 
     // 🎯 Copy and customize this example
 
+    // market.ts - Market data fetching with caching
+
+    import fetch from 'cross-fetch';
+
+
+    type MarketVenue = {
+      exchange: `0x${string}`;
+      adapter?: `0x${string}`;
+    };
+
+
+    type MarketData = {
+      id: number;
+      slug: string;
+      positionIds: string[];
+      venue: MarketVenue;
+    };
+
+
+    // Cache market data per slug (venue is static per market)
+
+    const marketCache = new Map<string, MarketData>();
+
+
+    export async function getMarketData(apiBase: string, slug: string):
+    Promise<MarketData> {
+      const cached = marketCache.get(slug);
+      if (cached) {
+        console.log(`Using cached market data for: ${slug}`);
+        return cached;
+      }
+
+      console.log(`Fetching market data for: ${slug}`);
+      const res = await fetch(`${apiBase}/markets/${slug}`);
+      if (!res.ok) throw new Error(`Failed to get market: ${res.status} ${await res.text()}`);
+
+      const market = (await res.json()) as MarketData;
+      marketCache.set(slug, market);
+      console.log(`Market data cached. Venue exchange: ${market.venue?.exchange}`);
+
+      return market;
+    }
+
+
+    export function getVenueExchange(market: MarketData): `0x${string}` {
+      if (!market.venue?.exchange) {
+        throw new Error(`Market ${market.slug} does not have venue data`);
+      }
+      return market.venue.exchange;
+    }
+
+    ```
+
+
+    ```ts
+
+    // 🎯 Copy and customize this example
+
     // auth.ts
 
     import fetch from 'cross-fetch';
 
-    import { Wallet } from 'ethers';
 
+    // API Key authentication
 
-    export async function getSigningMessage(apiBase: string): Promise<string> {
-      const res = await fetch(`${apiBase}/auth/signing-message`);
-      if (!res.ok) throw new Error(`Failed signing-message: ${res.status}`);
-      return res.text();
-    }
-
-
-    export async function loginWithPrivateKey(apiBase: string, privateKey:
-    string) {
-      const wallet = new Wallet(privateKey);
-      const address = await wallet.getAddress();
-
-      const message = await getSigningMessage(apiBase);
-      const signature = await wallet.signMessage(message);
-
-      const headers = {
-        'x-account': address,
-        'x-signing-message': `0x${Buffer.from(message, 'utf8').toString('hex')}`,
-        'x-signature': signature.startsWith('0x') ? signature : `0x${signature}`,
+    export function getApiKeyHeaders(apiKey: string) {
+      return {
+        'X-API-Key': apiKey,
         'content-type': 'application/json',
         accept: 'application/json',
       } as const;
+    }
 
-      const res = await fetch(`${apiBase}/auth/login`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ client: 'eoa' }),
+
+    // Fetch user profile using API key
+
+    export async function getUserWithApiKey(apiBase: string, apiKey: string) {
+      const res = await fetch(`${apiBase}/profile`, {
+        headers: getApiKeyHeaders(apiKey),
       });
-      if (!res.ok) throw new Error(`Auth failed: ${res.status} ${await res.text()}`);
-
-      const setCookie = res.headers.get('set-cookie') || '';
-      const match = /limitless_session=([^;]+)/i.exec(setCookie);
-      const session = match?.[1];
-      if (!session) throw new Error('Session cookie not found');
-
-      const user = await res.json();
-      return { session, user } as const;
+      if (!res.ok) throw new Error(`Failed to get profile: ${res.status} ${await res.text()}`);
+      return res.json();
     }
 
     ```
@@ -3047,6 +3787,11 @@ info:
     ] as const;
 
 
+    /**
+     * Create a signed order for CLOB trading.
+     * @param client - viem WalletClient with account
+     * @param options.verifyingContract - The venue's exchange address from market data (GET /markets/:slug)
+     */
     export async function createSignedOrder(
       client: WalletClient<Transport, Chain, Account>,
       options: {
@@ -3055,7 +3800,7 @@ info:
         tokenId: string;
         decimals?: number; // default 6
         chainId: number; // e.g., 8453
-        verifyingContract: `0x${string}`; // CTF_EXCHANGE
+        verifyingContract: `0x${string}`; // venue.exchange from market data
       },
     ) {
       const maker = client.account!.address as `0x${string}`;
@@ -3129,14 +3874,19 @@ info:
     import { io, Socket } from 'socket.io-client';
 
 
-    export function connectMarkets(session?: string) {
+    // Note: Cookie-based auth was previously supported but is now deprecated.
+
+    // Use API key authentication for all programmatic access.
+
+
+    export function connectMarkets(apiKey?: string) {
       const url = 'wss://ws.limitless.exchange/markets';
       const transports = ['websocket'];
 
       const opts: Parameters<typeof io>[1] = { transports };
-      if (session) {
-        // Send cookie via extraHeaders; supported on Node
-        opts.extraHeaders = { Cookie: `limitless_session=${session}` };
+
+      if (apiKey) {
+        opts.extraHeaders = { 'X-API-Key': apiKey };
       }
 
       const socket: Socket = io(url, opts);
@@ -3216,7 +3966,9 @@ info:
 
     // main.ts
 
-    import { loginWithPrivateKey } from './auth';
+    import { getApiKeyHeaders, getUserWithApiKey } from './auth';
+
+    import { getMarketData, getVenueExchange } from './market';
 
     import { createSignedOrder, submitOrder } from './orders';
 
@@ -3227,54 +3979,64 @@ info:
 
     async function main() {
       const API_URL = process.env.API_URL || 'https://api.limitless.exchange';
+      const API_KEY = process.env.API_KEY || ''; // Your API key (recommended)
+      const PRIVATE_KEY = process.env.PRIVATE_KEY || ''; // For order signing only
 
-      // Warning: storing private keys in .env files is dangerous, use proper secret management services.
-      const PRIVATE_KEY = process.env.PRIVATE_KEY || '';
+      if (!API_KEY) {
+        throw new Error('API_KEY environment variable is required. Generate one via UI: profile menu → Api keys');
+      }
 
-      // 1) Authenticate (optional for public WS; required to place orders)
-      const { session, user } = await loginWithPrivateKey(API_URL, PRIVATE_KEY);
+      // Market slug for CLOB trading
+      const marketSlug = 'example-market-slug'; // Replace with actual market slug
+
+      // 1) Get user profile using API key (no session management needed!)
+      const user = await getUserWithApiKey(API_URL, API_KEY);
       console.log('Authenticated as', user.account);
 
-      // 2) Connect WS and subscribe
-      const socket = connectMarkets(session);
+      // 2) Fetch market data (cached per market) to get venue and token info
+      const market = await getMarketData(API_URL, marketSlug);
+      const verifyingContract = getVenueExchange(market);
+      console.log('Using venue exchange:', verifyingContract);
+
+      // Get token IDs from market data
+      // positionIds[0] = YES token, positionIds[1] = NO token
+      const tokenId = market.positionIds[0]; // YES token for this example
+
+      // 3) Connect WS with API key
+      const socket = connectMarkets(API_KEY);
 
       // Combined subscription (send both arrays together to avoid replacing previous subscriptions)
       const marketAddresses = ['0xE082AF5a25f5D3904fae514CD03dC99F9Ff39fBc']; // AMM markets array
-      const marketSlugs = ['10-year-us-treasury-yield-above-5percent-by-december-31-1747672227493']; // CLOB markets array
+      const marketSlugs = [marketSlug]; // CLOB markets array
       socket.emit('subscribe_market_prices', { marketAddresses, marketSlugs });
 
       // Handlers
       socket.on('newPriceData', (data: unknown) => console.log('AMM price update:', data)); // AMM markets only
       socket.on('orderbookUpdate', (data: unknown) => console.log('Orderbook update:', data)); // CLOB markets only
 
-      // 3) Create wallet client from private key
+      // 4) Create wallet client from private key (still needed for EIP-712 order signing)
       const client = createWalletFromPrivateKey(PRIVATE_KEY as `0x${string}`);
 
-      // 4) Prepare and place CLOB order
-      const verifyingContract = (process.env.CLOB_CFT_ADDR ||
-        '0xa4409D988CA2218d956BeEFD3874100F444f0DC3') as `0x${string}`;
-
-      // Example values
-      const tokenId = '5948836681416454111127745720568337693454195496161482957614480647085110463871';
+      // 5) Prepare and place CLOB order using venue's exchange address
       const { order, signature } = await createSignedOrder(client, {
         amount: '1.5',
-        side: 0,
+        side: 0, // 0 = BUY
         tokenId,
         decimals: 6,
         chainId: 8453,
-        verifyingContract,
+        verifyingContract, // From venue data
       });
 
       const orderPayload = {
         order: { ...order, signature },
-        ownerId: Number(process.env.OWNER_ID || 49),
+        ownerId: user.id,
         orderType: 'FOK' as const,
-        marketSlug: '10-year-us-treasury-yield-above-5percent-by-december-31-1747672227493',
+        marketSlug,
       };
 
+      // 6) Submit order with API key
       const result = await submitOrder(API_URL, orderPayload, {
-        Authorization: `Bearer ${process.env.AUTH_TOKEN || ''}`,
-        Identity: `Bearer ${process.env.IDENTITY_TOKEN || ''}`,
+        'X-API-Key': API_KEY,
       });
       console.log('Order created:', result);
     }
@@ -3316,12 +4078,31 @@ info:
     #### Notes
 
 
-    - Use cookies (session) in WS headers to receive authenticated streams
-    if/when required for certain features.
+    - **API keys are required** ✨ for all programmatic access. Use the
+    `X-API-Key` header.
+
+    - **Cookie-based auth is deprecated** ✨ and will be removed in a future
+    release. Migrate to API keys.
 
     - For public AMM prices or orderbook, authentication is not required.
 
     - Scale USDC to 6 decimals when computing amounts.
+
+    - **Venue data is static** ✨: Fetch market data once per market and cache
+    it. Do not fetch before every trade.
+
+    - **Checksummed addresses** ✨: All addresses must be in EIP-55 checksummed
+    format. viem's `getAddress()` and `privateKeyToAccount()` return checksummed
+    addresses by default.
+
+    - Contract addresses (exchange, adapter) are fetched dynamically from the
+    market's venue data via `GET /markets/:slug`.
+
+    - **Private key is still needed** ✨ for EIP-712 order signing, but API key
+    handles authentication.
+
+
+    _Last updated: 2026-01-22_
 
 
 
@@ -3365,10 +4146,9 @@ info:
     The Socket.io integration process involves:
 
 
-    1. **Authentication**: Get a signing message and authenticate with your
-    wallet
+    1. **Authentication**: Use API key for all programmatic access
 
-    2. **WebSocket Connection**: Connect to the `markets`
+    2. **WebSocket Connection**: Connect to the `markets` namespace
 
     3. **Event Subscription**: Subscribe to market prices and position updates
 
@@ -3394,6 +4174,42 @@ info:
     script has been tested with the specified dependencies.
 
 
+    ##### 🔐 Authentication for API Users
+
+
+    > **⚠️ DEPRECATION NOTICE**: Cookie-based session authentication is
+    deprecated and will be removed within weeks. Migrate to API keys
+    immediately.
+
+
+    **Getting an API Key**:
+
+    API keys can only be created via the UI: Login → profile menu (top right) →
+    Api keys
+
+
+    **Using Your API Key**:
+
+    Pass `X-API-Key` header during WebSocket connection handshake.
+
+
+    ##### Migration from Cookie to API Key
+
+
+    Replace cookie with API key header:
+
+
+    ```diff
+
+    ##### WebSocket connection headers
+
+    - headers = {'Cookie': f'limitless_session={session_cookie}'}
+
+    + headers = {'X-API-Key': api_key}
+
+    ```
+
+
     ##### Environment Variables
 
 
@@ -3401,9 +4217,14 @@ info:
 
     # Connection Commands
 
-    ##### Required for authenticated features (positions, transactions)
+    ##### Recommended: API key for programmatic access
 
-    export PRIVATE_KEY="0x..."  # Your wallet private key
+    export API_KEY="lmts_..."     # Your API key
+
+
+    ##### Only needed for order signing (not for WebSocket auth)
+
+    export PRIVATE_KEY="0x..."    # Your wallet private key
 
 
     ##### Optional: Enable debug logging
@@ -3411,6 +4232,10 @@ info:
     export DEBUG=1
 
     ```
+
+
+    Note: in real case you'd want to avoid storing private key and api key in
+    plaintext in environment variables. Use proper secret management services.
 
 
     #### Complete Implementation
@@ -3600,12 +4425,20 @@ info:
 
     Essential functionality: authentication, connection, subscription, events
 
+
+    Note: Cookie-based auth was previously supported but is now deprecated.
+
+    Use API key authentication for all programmatic access.
+
     """
 
-        def __init__(self, websocket_url: str = "wss://ws.limitless.exchange", private_key: Optional[str] = None):
+        def __init__(
+            self,
+            websocket_url: str = "wss://ws.limitless.exchange",
+            api_key: Optional[str] = None,
+        ):
             self.websocket_url = websocket_url
-            self.private_key = private_key
-            self.session_cookie = None
+            self.api_key = api_key
             self.connected = False
             self.subscribed_markets: List[str] = []
 
@@ -3620,10 +4453,6 @@ info:
             async def connect():
                 self.connected = True
                 print("✅ Connected to /markets")
-
-                # Send authentication if available
-                if self.session_cookie:
-                    await self.sio.emit('authenticate', f'Bearer {self.session_cookie}', namespace='/markets')
 
                 # Re-subscribe to markets after reconnection
                 if self.subscribed_markets:
@@ -3658,36 +4487,19 @@ info:
                 """Print raw exception packet"""
                 print(f"Received packet MESSAGE data 2/markets, [\"exception\", {json.dumps(data)}]")
 
-        async def authenticate(self):
-            """Get session cookie for authentication"""
-            if not self.private_key:
-                print("💡 No private key - running in public mode")
-                return
-
-            try:
-                print("🔐 Authenticating with private key...")
-                signing_message = get_signing_message()
-                self.session_cookie, user_data = authenticate(self.private_key, signing_message)
-                print(f"✅ Authenticated as: {user_data['account']}")
-            except Exception as e:
-                print(f"❌ Authentication failed: {e}")
-
         async def connect(self):
-            """Connect to WebSocket with working configuration"""
+            """Connect to WebSocket"""
             try:
-                # Authenticate first if private key provided
-                await self.authenticate()
-
-                # Connect with same options as working version
                 print(f"🔌 Connecting to {self.websocket_url}...")
 
-                # Prepare connection options with authentication headers if available
+                # Prepare connection options with authentication headers
                 connect_options = {'transports': ['websocket']}
-                if self.session_cookie:
-                    connect_options['headers'] = {
-                        'Cookie': f'limitless_session={self.session_cookie}'
-                    }
-                    print("🍪 Adding session cookie to connection headers")
+
+                if self.api_key:
+                    connect_options['headers'] = {'X-API-Key': self.api_key}
+                    print("🔑 Using API key authentication")
+                else:
+                    print("📊 Connecting in public mode (no authentication)")
 
                 await self.sio.connect(
                     self.websocket_url,
@@ -3724,8 +4536,8 @@ info:
             await self.sio.emit('subscribe_market_prices', payload, namespace='/markets')
             print("✅ Subscribed to market prices")
 
-            # Subscribe to positions if authenticated
-            if self.session_cookie:
+            # Subscribe to positions if authenticated with API key
+            if self.api_key:
                 await self.sio.emit('subscribe_positions', payload, namespace='/markets')
                 print("✅ Subscribed to positions")
 
@@ -3763,21 +4575,21 @@ info:
 
     global MARKET_ADDRESSES
 
-        # Check environment variable for additional markets
-
-        private_key = os.getenv('PRIVATE_KEY')
+        # Note: Cookie-based auth was previously supported but is now deprecated.
+        # Use API key authentication for all programmatic access.
+        api_key = os.getenv('API_KEY')
 
         print("=" * 50)
         print("Limitless Exchange WebSocket Client")
         print("=" * 50)
 
-        if private_key:
-            print("🔐 Private key detected - full market data mode")
+        if api_key:
+            print("🔑 API key detected - authenticated mode")
         else:
             print("📊 Public mode - price data only")
 
         # Create and run client
-        client = LimitlessWebSocket(private_key=private_key)
+        client = LimitlessWebSocket(api_key=api_key)
 
         try:
             # Connect to WebSocket
@@ -3901,7 +4713,7 @@ info:
     ```
 
 
-    ##### Authenticated Connection (Full Data)
+    ##### Authenticated Connection with API Key
 
 
     ```python
@@ -3916,16 +4728,20 @@ info:
 
 
     async def authenticated_example():
-        private_key = os.getenv('PRIVATE_KEY') ##please define on shell level export PRIVATE_KEY='0x...'
-        client = LimitlessWebSocket(private_key=private_key)
+        api_key = os.getenv('API_KEY')  # export API_KEY='lmts_...'
+        client = LimitlessWebSocket(api_key=api_key)
 
         await client.connect()
-        await client.subscribe_markets(["0x1234..."]) # on script level is passed automatically
+        await client.subscribe_markets(["0x1234..."])
         await client.wait()
 
     asyncio.run(authenticated_example())
 
     ```
+
+
+    > **Note**: Cookie-based authentication was previously supported but is now
+    deprecated. Use API keys for all programmatic access.
 
 
     ##### Custom Event Handling
@@ -3961,9 +4777,9 @@ info:
     ##### ⚠️ Security Considerations
 
 
-    - **NEVER** share your private key with anyone
+    - **NEVER** share your API key or private key with anyone
 
-    - **NEVER** commit your private key to version control
+    - **NEVER** commit credentials to version control
 
     - Use environment variables to store sensitive information
 
@@ -3981,7 +4797,7 @@ info:
 
     - **Transport**: WebSocket only (no polling fallback)
 
-    - **Authentication**: JWT session cookies
+    - **Authentication**: API key via `X-API-Key` header
 
 
     ##### Connection Management
@@ -4079,17 +4895,14 @@ info:
 
 
     1. **Import Error for socketio**
-
        - Solution: Install with async support: `pip install python-socketio[asyncio]`
 
     2. **Connection Failed**
-
        - Check WebSocket URL is correct
        - Verify network connectivity
        - Check if market addresses are valid
 
     3. **Authentication Failed**
-
        - Verify private key format (with or without '0x' prefix)
        - Check that signing message request succeeds
        - Ensure wallet has sufficient permissions
@@ -4126,9 +4939,15 @@ info:
 
     # Connection Commands
 
-    ##### Required for authenticated features
+    ##### Recommended: API key for authenticated features
 
-    export PRIVATE_KEY="0x..."  # Your wallet private key
+    export API_KEY="lmts_..."     # Your API key (generate via UI: profile menu
+    → Api keys)
+
+
+    ##### Only needed for order signing (not WebSocket auth)
+
+    export PRIVATE_KEY="0x..."    # Your wallet private key
 
 
     ##### Optional debugging
@@ -4205,7 +5024,7 @@ info:
 
 
 
-    _Last updated: 2025-09-05_
+    _Last updated: 2026-02-03_
   version: "1.0"
   contact:
     name: API Support
@@ -4225,16 +5044,11 @@ servers:
     description: Production API
 components:
   securitySchemes:
-    apiKey:
-      type: apiKey
-      in: header
-      name: X-API-Key
-      description: API key for programmatic access. Generate at limitless.exchange (profile → Api keys). Keys start with 'lmts_'.
     cookie:
       type: apiKey
       in: cookie
       name: limitless_session
-      description: "DEPRECATED: Session authentication cookie obtained from /auth/login. Will be removed within weeks. Migrate to API key (X-API-Key header)."
+      description: Session authentication cookie obtained from /auth/login
     bearer:
       scheme: bearer
       bearerFormat: JWT
@@ -4694,6 +5508,14 @@ components:
           description: Rewards information for the portfolio
           allOf:
             - $ref: "#/components/schemas/PortfolioRewardsDto"
+        points:
+          type: number
+          description: User points
+          example: 123
+        accumulativePoints:
+          type: number
+          description: User accumulative points
+          example: 456
         amm:
           description: List of AMM positions
           type: array
@@ -4704,10 +5526,65 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ClobPositionDto"
+        group:
+          description: Grouped CLOB positions (if enabled)
+          type: array
+          items:
+            type: object
       required:
         - rewards
+        - points
+        - accumulativePoints
         - amm
         - clob
+    PortfolioPnlChartPointDto:
+      type: object
+      properties:
+        timestamp:
+          type: number
+          description: Point timestamp (ms)
+          example: 1700000000000
+        value:
+          type: number
+          description: Series value in USD (realised PnL)
+          example: 123.45
+      required:
+        - timestamp
+        - value
+    PortfolioPnlChartDto:
+      type: object
+      properties:
+        timeframe:
+          type: string
+          description: Timeframe window used for previous/current comparison
+          example: 7d
+        data:
+          description: Realised PnL series (USD) for the selected timeframe
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioPnlChartPointDto"
+        currentValue:
+          type: number
+          description: Current realised PnL (USD)
+          example: -7.04
+        previousValue:
+          type: number
+          description: Previous realised PnL (USD) at timeframe start
+          example: -6.5
+        percentChange:
+          type: number
+          description: Percent change between previousValue and currentValue (realised PnL)
+          example: 8.24
+        current:
+          type: object
+          description: "Current PnL snapshot (hybrid: realised + unrealized + total)"
+          nullable: true
+      required:
+        - timeframe
+        - data
+        - currentValue
+        - previousValue
+        - percentChange
     HistoryMarketGroupDto:
       type: object
       properties:
