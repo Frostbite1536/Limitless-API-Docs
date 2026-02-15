@@ -153,6 +153,33 @@ No, public data streams don't require authentication. Pass the `X-API-Key` heade
 
 ---
 
+## Claiming & Redeeming
+
+### How do I claim/redeem my winnings after a market resolves?
+
+There is **no REST API endpoint** for claiming/redeeming. Redemption is an on-chain operation. You must call `redeemPositions()` on the appropriate smart contract on Base.
+
+1. Check market resolution via `GET /markets/{slug}` (look for `status: "RESOLVED"`)
+2. Verify your winning token balance via `GET /portfolio/positions`
+3. Call `redeemPositions()` on the Conditional Tokens contract (standard CLOB) or the NegRisk Adapter (NegRisk markets)
+
+See the full [Claiming & Redeeming Guide](claiming-redeeming.md) for code examples in TypeScript and Python.
+
+### Which smart contract do I use for redemption?
+
+| Market Type | Contract |
+|-------------|----------|
+| Standard CLOB | Conditional Tokens: `0xc9c98965297bc527861c898329ee280632b76e18` |
+| NegRisk | Use `market.venue.adapter` from market data |
+
+### Can I exit a position before the market resolves?
+
+Yes, two options:
+1. **Sell on the order book** using `POST /orders` (creates a SELL order)
+2. **Merge positions** on-chain: if you hold equal YES and NO tokens, call `mergePositions()` on the CTF contract to get USDC back without selling
+
+---
+
 ## Portfolio
 
 ### How do I get my positions?

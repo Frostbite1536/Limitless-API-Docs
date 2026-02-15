@@ -20,6 +20,7 @@ WebSocket: wss://ws.limitless.exchange
 | [Trading](endpoints/trading.md) | Historical prices, orderbook, market events | Optional |
 | [Orders](endpoints/orders.md) | Create and manage buy/sell orders | Required |
 | [Portfolio](endpoints/portfolio.md) | User positions, trades, and rewards | Required |
+| [Claiming & Redeeming](guides/claiming-redeeming.md) | Redeem winning positions on-chain | N/A (on-chain) |
 
 ## Key Concepts
 
@@ -112,6 +113,7 @@ docs/
 ├── guides/
 │   ├── authentication.md    # Auth flow guide
 │   ├── placing-orders.md    # Order creation guide
+│   ├── claiming-redeeming.md # Claiming & redeeming positions
 │   ├── websockets.md        # Real-time data guide
 │   └── faq.md               # Common questions
 └── user-questions/          # Real developer issues

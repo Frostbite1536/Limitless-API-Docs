@@ -8,6 +8,7 @@ Real questions and issues from developers using the Limitless Exchange API.
 
 | Issue | Description |
 |-------|-------------|
+| [Claiming Rewards After Market Close](claim-rewards-after-close.md) | How to redeem winning positions via smart contract after a market resolves |
 | [WebSocket Positions Subscription](websocket-positions-subscription.md) | How to subscribe to positions via WebSocket in TypeScript |
 | [Historical Data for Backtesting](historical-data-backtesting.md) | How to access historical price data for backtesting trading strategies |
 | [Tracking LP Rewards](lp-rewards-tracking.md) | How to check if you're earning LP rewards and how much |
@@ -43,5 +44,6 @@ Have a question that's not covered? Open an issue or PR to add it!
 ## Related Documentation
 
 - [FAQ](../guides/faq.md) - General questions
+- [Claiming & Redeeming Guide](../guides/claiming-redeeming.md) - Full guide on redeeming winning positions
 - [Troubleshooting](../guides/placing-orders.md#troubleshooting) - Order placement issues
 - [API Endpoints](../endpoints/) - Full endpoint documentation

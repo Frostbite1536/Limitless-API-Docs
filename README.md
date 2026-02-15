@@ -37,6 +37,7 @@ Limitless-API/
     ├── guides/               # Task-focused tutorials
     │   ├── authentication.md
     │   ├── placing-orders.md
+    │   ├── claiming-redeeming.md
     │   ├── websockets.md
     │   └── faq.md
     └── user-questions/       # Real issues from developers
@@ -88,6 +89,7 @@ The `docs/` folder contains **AI-generated documentation** designed specifically
 | Get started fast | [Python Quickstart](docs/quickstart/python.md) |
 | Understand the API | [Overview](docs/overview.md) |
 | Place an order | [Placing Orders Guide](docs/guides/placing-orders.md) |
+| Claim/redeem winnings | [Claiming & Redeeming Guide](docs/guides/claiming-redeeming.md) |
 | Real-time data | [WebSocket Guide](docs/guides/websockets.md) |
 | Common questions | [FAQ](docs/guides/faq.md) |
 | Troubleshooting errors | [User Questions](docs/user-questions/) |
