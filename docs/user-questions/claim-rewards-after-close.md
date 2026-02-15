@@ -1,8 +1,8 @@
 # Claiming Rewards After Markets Close
 
-> **Auth Update**: Code examples below use cookie-based auth which is **deprecated**. Replace `cookies={"limitless_session": session_cookie}` with `headers={"X-API-Key": "lmts_your_key_here"}`. See [Authentication Guide](../../docs/guides/authentication.md).
-
 **Question**: Is it possible to claim rewards after markets have closed using the Limitless API?
+
+> **See also**: [Claiming & Redeeming Guide](../guides/claiming-redeeming.md) for a comprehensive walkthrough with full TypeScript and Python examples.
 
 ## Answer
 
@@ -46,7 +46,7 @@ Verify you hold winning tokens:
 ```python
 response = requests.get(
     "https://api.limitless.exchange/portfolio/positions",
-    cookies={"limitless_session": session_cookie}
+    headers={"X-API-Key": "lmts_your_key_here"}
 )
 positions = response.json()
 
