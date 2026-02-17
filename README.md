@@ -189,9 +189,8 @@ This documentation is for educational purposes only. The AI-generated docs in `d
 ## Support
 
 - **Official Docs**: https://limitlesslabs.notion.site/
-- **Email**: hey@limitless.network
 - **API Spec**: https://api.limitless.exchange/api-v1
 
 ## License
 
-This repository contains both official Limitless documentation (used with permission) and AI-generated supplementary materials. See individual files for specific licensing information.
+This repository contains both official Limitless documentation (used with permission) and AI-generated supplementary materials.
