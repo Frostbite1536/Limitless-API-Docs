@@ -30,7 +30,9 @@ There is no separate "enable trading" toggle. If you have an API key and a funde
 | `401 Unauthorized` | API key missing or invalid | Check `X-API-Key` header, ensure key starts with `lmts_` |
 | `Invalid signature` | Wrong `verifyingContract` | Fetch `venue.exchange` from `GET /markets/{slug}` |
 | `Invalid signature` | Address not checksummed | Use `Web3.to_checksum_address()` |
-| Order accepted but no fill | No USDC balance or no approval | Fund wallet and approve USDC to venue contract |
+| `Insufficient allowance` | USDC not approved for venue contract | Run the approval script below (one-time per venue) |
+| `Insufficient balance` | No USDC on Base | Bridge or transfer USDC to your wallet on Base mainnet |
+| Order accepted but no fill | GTC order waiting for a match | This is normal — your limit order is on the book |
 | `Signer does not match` | Wallet linked to smart wallet via frontend | Use a fresh wallet for API-only trading (see note below) |
 
 > **Important**: If you have ever logged into the Limitless web frontend with this wallet, it may have been linked to a smart wallet. This makes simple EOA signing fail. **Use a dedicated wallet for API trading** that has never been used on the web frontend.
@@ -268,7 +270,7 @@ def place_trade(market_slug, token_type, price_cents, num_shares):
     # Step 5 — Submit
     print("Submitting order...")
     result = submit_order(order, market_slug, order_type="GTC")
-    print(f"Result:   {result}")
+    print(f"Order ID: {result['order']['orderId']}")
     return result
 
 
@@ -301,6 +303,18 @@ if __name__ == "__main__":
 | Wrong chain ID | `Invalid signature` error | Must be `8453` (Base mainnet) |
 | Missing `price` field | Order rejected | Add `order["price"] = price` for GTC orders |
 | Used wallet on web frontend | `Signer does not match` | Use a fresh wallet that was never used on limitless.exchange |
+
+## Pre-Flight Checklist
+
+Before placing your first order, confirm every item:
+
+- [ ] API key generated at limitless.exchange (profile → Api keys)
+- [ ] `LIMITLESS_API_KEY` and `PRIVATE_KEY` exported as environment variables
+- [ ] USDC funded on Base mainnet (chain 8453)
+- [ ] USDC approved for the venue's exchange contract (one-time per venue)
+- [ ] `venue.exchange` fetched from `GET /markets/{slug}` (never hardcoded)
+- [ ] Chain ID is `8453` in EIP-712 domain
+- [ ] Wallet has **never** been used on the Limitless web frontend (to avoid smart wallet linking)
 
 ## If You Still Can't Trade
 
