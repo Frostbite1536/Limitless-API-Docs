@@ -178,6 +178,10 @@ Yes, two options:
 1. **Sell on the order book** using `POST /orders` (creates a SELL order)
 2. **Merge positions** on-chain: if you hold equal YES and NO tokens, call `mergePositions()` on the CTF contract to get USDC back without selling
 
+### Does `mergePositions` work with embedded / smart wallets (Safe)?
+
+Yes. `mergePositions` is a function on the CTF contract and does not care about the wallet type. The only requirement is that the **calling wallet holds the tokens**. If your positions are in a Gnosis Safe (which happens when you use the Limitless frontend), you must execute the merge as a Safe transaction, signed by the embedded account. If your positions are in a plain EOA (API-only trading), call the contract directly. See the [Claiming Rewards After Close](../user-questions/claim-rewards-after-close.md#does-mergepositions-work-with-embedded--smart-wallets-safe) guide for full details.
+
 ---
 
 ## Portfolio
