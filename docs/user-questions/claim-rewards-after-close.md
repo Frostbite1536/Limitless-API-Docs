@@ -127,16 +127,88 @@ While claiming isn't available via API, these endpoints support the redemption w
 | `GET /portfolio/positions` | View your token balances |
 | `GET /portfolio/history` | Track redemption transactions |
 
-## Alternative: Merge Positions
+## Alternative: Merge Positions (Active Markets)
 
-If a market is still active, you can merge equal amounts of YES and NO tokens back into USDC using the `Merge` operation on the CTF contract:
+If a market is **still active** (not resolved), you can merge equal amounts of YES and NO tokens back into USDC using `mergePositions()` on the CTF contract. This burns both token types and returns collateral without selling on the order book.
 
 ```typescript
-// Merge function signature
-"function mergePositions(address collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata partition, uint amount) external"
+const CTF_ABI = [
+  "function mergePositions(address collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata partition, uint amount) external"
+];
+
+const ctf = new ethers.Contract(CTF_ADDRESS, CTF_ABI, signer);
+
+const tx = await ctf.mergePositions(
+  USDC_ADDRESS,
+  ethers.ZeroHash,          // parentCollectionId = bytes32(0)
+  conditionId,
+  [1, 2],                   // partition: both outcomes
+  amount                    // amount of each token to merge (6-decimal USDC units)
+);
+await tx.wait();
 ```
 
-This is useful for exiting positions without selling on the order book.
+### Does `mergePositions` Work with Embedded / Smart Wallets (Safe)?
+
+**Yes.** Both `mergePositions` and `redeemPositions` are functions on the CTF contract — they don't care about wallet type. The only requirement is that the **calling wallet holds the tokens**.
+
+When using the Limitless frontend, the platform creates:
+
+| Component | What It Is | Role |
+|-----------|-----------|------|
+| **Embedded account** (`embeddedAccount`) | Privy EOA, stored in the browser/enclave | **Signer** — signs transactions |
+| **Smart wallet** (`smartWallet`) | Gnosis Safe contract on Base | **Position holder** — holds outcome tokens and USDC |
+
+Your **positions live in the Safe**, not in the embedded account. So:
+
+- The **Safe** must be the caller of `mergePositions` / `redeemPositions`
+- You execute this as a Safe transaction, signed by the embedded account (the Safe's owner)
+- Use a Safe SDK (`@safe-global/protocol-kit` or `safe-eth-py`) to build and execute Safe transactions
+
+"Base vs Safe" is **not** an either/or — the Safe *is* deployed on Base. The real distinction is:
+
+| Wallet Setup | Who Calls the Contract | How |
+|-------------|----------------------|-----|
+| **Plain EOA** (API-only trading, `signatureType: 0`) | The EOA directly | Standard `send_raw_transaction` |
+| **Safe / embedded wallet** (Limitless frontend) | The Safe contract | Safe transaction signed by embedded account |
+
+#### Merging via a Safe (Python pseudocode)
+
+```python
+# 1. Build the mergePositions calldata
+calldata = ctf.functions.mergePositions(
+    USDC_ADDRESS,
+    b'\x00' * 32,       # parentCollectionId
+    condition_id,
+    [1, 2],              # both outcomes
+    merge_amount
+).build_transaction({'from': safe_address})['data']
+
+# 2. Execute through the Safe (using safe-eth-py or protocol-kit)
+from safe_eth.safe import Safe
+
+safe = Safe(safe_address, ethereum_client)
+safe_tx = safe.build_multisig_tx(to=CTF_ADDRESS, value=0, data=calldata)
+safe_tx.sign(embedded_account_private_key)
+tx_hash, _ = safe_tx.execute(embedded_account_private_key)
+```
+
+#### Merging via plain EOA
+
+```python
+tx = ctf.functions.mergePositions(
+    USDC_ADDRESS,
+    b'\x00' * 32,
+    condition_id,
+    [1, 2],
+    merge_amount
+).build_transaction({
+    'from': your_eoa_address,
+    'nonce': w3.eth.get_transaction_count(your_eoa_address),
+})
+signed = account.sign_transaction(tx)
+tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+```
 
 ## Common Issues
 
