@@ -320,14 +320,14 @@ The SDK ships with working examples:
 | `04_create_sell_gtc_order.py` | GTC SELL order |
 | `05_create_buy_fok_order.py` | FOK BUY order |
 | `06_create_sell_fok_order.py` | FOK SELL order |
-| `06_retry_handling.py` | Custom retry logic |
-| `07_auto_retry_second_sample.py` | Auto-retry patterns |
-| `08_websocket_events.py` | Real-time WebSocket events |
+| `07_retry_handling.py` | Custom retry logic |
+| `08_auto_retry_second_sample.py` | Auto-retry patterns |
+| `09_websocket_events.py` | Real-time WebSocket events |
 
 ## Links
 
 - **PyPI**: https://pypi.org/project/limitless-sdk/
-- **Source**: https://github.com/limitless-labs-group/limitless-exchange-ts-sdk
+- **Source**: https://github.com/limitless-labs-group/limitless-exchange-sdk
 
 ## Disclaimer
 

@@ -28,7 +28,7 @@ const httpClient = new HttpClient({
 const marketFetcher = new MarketFetcher(httpClient);
 
 // Get active markets
-const markets = await marketFetcher.getActiveMarkets({ limit: 10, sortBy: 'volume' });
+const markets = await marketFetcher.getActiveMarkets({ limit: 10, sortBy: 'newest' });
 console.log(`Found ${markets.totalMarketsCount} markets`);
 
 // Fetch specific market (caches venue data automatically)
@@ -210,17 +210,13 @@ Before placing orders, you must approve tokens for the exchange contracts. This 
 | SELL | Simple CLOB | CT → `venue.exchange` |
 | SELL | NegRisk | CT → `venue.exchange` AND `venue.adapter` |
 
-The SDK includes a setup script and helper for contract addresses:
-
-```bash
-npx tsx docs/code-samples/setup-approvals.ts
-```
+Use `ethers.js` or `viem` to approve the exchange contract to spend your tokens:
 
 ```typescript
-import { getContractAddress } from '@limitless-exchange/sdk';
+import { ethers } from 'ethers';
 
-const usdcAddress = getContractAddress('USDC');
-const ctfAddress = getContractAddress('CTF');
+const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, wallet);
+await usdc.approve(venue.exchange, ethers.MaxUint256);
 ```
 
 ## WebSocket Support
@@ -280,7 +276,7 @@ const result = await withRetry(
 ## What the SDK Does NOT Cover
 
 - **On-chain operations**: `mergePositions()` and `redeemPositions()` are smart contract calls — use `ethers.js` or `viem` directly. See [Claiming & Redeeming Guide](claiming-redeeming.md).
-- **Token approvals**: One-time setup using `ethers.js` (helper script provided in `docs/code-samples/setup-approvals.ts`).
+- **Token approvals**: One-time setup using `ethers.js` or `viem` (see Token Approvals section above).
 
 ## Examples
 

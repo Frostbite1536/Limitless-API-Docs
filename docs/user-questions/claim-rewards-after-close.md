@@ -150,7 +150,7 @@ await tx.wait();
 
 ### Does `mergePositions` Work with Embedded / Smart Wallets (Safe)?
 
-Both `mergePositions` and `redeemPositions` are functions on the CTF contract — they don't care about wallet type. The only requirement is that the **calling wallet holds the tokens**.
+Both `mergePositions` and `redeemPositions` are functions on the CTF contract — they accept calls from any wallet type. The requirement is that the **calling wallet holds the tokens** and the transaction is **signed by an authorized key** (the wallet's own key, or the Safe owner's key).
 
 When using the Limitless frontend, the platform creates:
 
