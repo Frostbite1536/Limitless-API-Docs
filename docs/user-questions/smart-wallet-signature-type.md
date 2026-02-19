@@ -1,6 +1,6 @@
 # Smart Wallet Signature Type Error
 
-> **Tip**: The [`limitless-sdk`](../guides/sdk.md) handles signature type selection automatically for EOA wallets. For the simplest API trading experience, use a fresh EOA wallet with the SDK: `pip install limitless-sdk`
+> **Tip**: The official SDKs handle signature type selection automatically for EOA wallets. For the simplest API trading experience, use a fresh EOA wallet with an SDK: Python `pip install limitless-sdk` ([guide](../guides/sdk.md)), TypeScript `npm install @limitless-exchange/sdk` ([guide](../guides/sdk-typescript.md)).
 
 ## Symptoms
 

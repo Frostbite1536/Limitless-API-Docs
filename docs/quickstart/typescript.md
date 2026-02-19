@@ -2,14 +2,54 @@
 
 Complete guide to trading on Limitless Exchange using TypeScript.
 
-## Prerequisites
+## Recommended: Use the TypeScript SDK
 
-### Required Packages
+The **`@limitless-exchange/sdk`** is the official TypeScript SDK and the **preferred** way to interact with the Limitless API. It handles EIP-712 signing, venue caching, authentication, and provides full type safety.
+
+```bash
+npm install @limitless-exchange/sdk
+```
+
+```typescript
+import { HttpClient, MarketFetcher, OrderClient, Side, OrderType } from '@limitless-exchange/sdk';
+import { ethers } from 'ethers';
+
+const httpClient = new HttpClient({
+  baseURL: 'https://api.limitless.exchange',
+});
+
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!);
+const marketFetcher = new MarketFetcher(httpClient);
+const orderClient = new OrderClient({ httpClient, wallet });
+
+// Fetch market (venue data cached automatically)
+const market = await marketFetcher.getMarket('btc-100k-2024');
+
+// Place a BUY order — signing handled automatically
+const order = await orderClient.createOrder({
+  tokenId: market.tokens.yes,
+  price: 0.65,
+  size: 100,
+  side: Side.BUY,
+  orderType: OrderType.GTC,
+  marketSlug: market.slug,
+});
+
+console.log(`Order ID: ${order.order.id}`);
+```
+
+See the full [TypeScript SDK Guide](../guides/sdk-typescript.md) for all features including FOK orders, NegRisk markets, cancellation, portfolio, WebSocket, and retry handling.
+
+---
+
+## Alternative: Raw API (without SDK)
+
+If you need fine-grained control, you can use the raw API with `viem`/`ethers` and `fetch`. **The SDK is still recommended** as it eliminates common pitfalls (incorrect signing, missing venue data, type mismatches).
+
+### Prerequisites
 
 ```bash
 npm install viem ethers socket.io-client cross-fetch
-# or
-pnpm add viem ethers socket.io-client cross-fetch
 ```
 
 ### Environment Variables
@@ -17,28 +57,9 @@ pnpm add viem ethers socket.io-client cross-fetch
 ```bash
 export LIMITLESS_API_KEY="lmts_..."  # Your API key (generate at limitless.exchange)
 export PRIVATE_KEY="0x..."           # Your wallet private key (for order signing)
-export API_URL="https://api.limitless.exchange"
 ```
 
-## Project Setup
-
-### tsconfig.json
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "outDir": "./dist"
-  }
-}
-```
-
-## Complete Trading Example
+## Raw API Trading Example
 
 ### 1. Authentication (auth.ts)
 

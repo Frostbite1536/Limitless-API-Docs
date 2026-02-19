@@ -86,7 +86,8 @@ The `docs/` folder contains **AI-generated documentation** designed specifically
 
 | Task | Document |
 |------|----------|
-| **Use the Python SDK** | **[SDK Guide](docs/guides/sdk.md)** (recommended) |
+| **Use the Python SDK** | **[Python SDK Guide](docs/guides/sdk.md)** (recommended) |
+| **Use the TypeScript SDK** | **[TypeScript SDK Guide](docs/guides/sdk-typescript.md)** (recommended) |
 | Get started fast | [Python Quickstart](docs/quickstart/python.md) |
 | Understand the API | [Overview](docs/overview.md) |
 | Place an order | [Placing Orders Guide](docs/guides/placing-orders.md) |
@@ -126,43 +127,34 @@ A guide describing collaborative, structured methods for building software with 
 
 The Safe Vibe Coding methodology pairs well with this repository when building trading bots or integrations with the Limitless API.
 
-## Python SDK (Recommended)
+## Official SDKs (Recommended)
 
-The **`limitless-sdk`** is the official Python SDK and the **preferred** way to interact with the Limitless API. It handles EIP-712 signing, venue caching, authentication, and order management automatically.
+Official SDKs are the **preferred** way to interact with the Limitless API. They handle EIP-712 signing, venue caching, authentication, and order management automatically.
 
-```bash
-pip install limitless-sdk
-```
+| SDK | Install | Guide |
+|-----|---------|-------|
+| **Python** | `pip install limitless-sdk` | [Python SDK Guide](docs/guides/sdk.md) |
+| **TypeScript** | `npm install @limitless-exchange/sdk` | [TypeScript SDK Guide](docs/guides/sdk-typescript.md) |
 
 ```python
-import asyncio
-from eth_account import Account
-from limitless_sdk.api import HttpClient
-from limitless_sdk.markets import MarketFetcher
+# Python
 from limitless_sdk.orders import OrderClient
-from limitless_sdk.types import Side, OrderType
-
-async def main():
-    http_client = HttpClient()  # Uses LIMITLESS_API_KEY env var
-    account = Account.from_key("0x...")
-
-    market_fetcher = MarketFetcher(http_client)
-    market = await market_fetcher.get_market("btc-100k-2024")
-
-    order_client = OrderClient(http_client=http_client, wallet=account)
-    order = await order_client.create_order(
-        token_id=str(market.tokens.yes),
-        price=0.65, size=100.0,
-        side=Side.BUY, order_type=OrderType.GTC,
-        market_slug=market.slug
-    )
-    print(f"Order ID: {order.order.id}")
-    await http_client.close()
-
-asyncio.run(main())
+order = await order_client.create_order(
+    token_id=str(market.tokens.yes), price=0.65, size=100.0,
+    side=Side.BUY, order_type=OrderType.GTC, market_slug=market.slug
+)
 ```
 
-See the full [SDK Guide](docs/guides/sdk.md) for all features. The raw API is still available for non-Python languages or when fine-grained control is needed.
+```typescript
+// TypeScript
+import { OrderClient, Side, OrderType } from '@limitless-exchange/sdk';
+const order = await orderClient.createOrder({
+  tokenId: market.tokens.yes, price: 0.50, size: 10,
+  side: Side.BUY, orderType: OrderType.GTC, marketSlug: market.slug,
+});
+```
+
+The raw API is still available when fine-grained control is needed.
 
 ## Key API Concepts
 

@@ -145,6 +145,30 @@ order = await order_client.create_order(
 
 Features: async/await, venue caching, WebSocket support, automatic retries, typed errors. See [PyPI](https://pypi.org/project/limitless-sdk/) for full documentation.
 
+## 📘 TypeScript SDK (Recommended)
+
+The **`@limitless-exchange/sdk`** is the official TypeScript SDK with full type safety and the same feature set as the Python SDK.
+
+```bash
+npm install @limitless-exchange/sdk
+```
+
+```typescript
+import { HttpClient, MarketFetcher, OrderClient, Side, OrderType } from '@limitless-exchange/sdk';
+
+const httpClient = new HttpClient({ baseURL: 'https://api.limitless.exchange' });
+const marketFetcher = new MarketFetcher(httpClient);
+const market = await marketFetcher.getMarket('market-slug');
+
+const orderClient = new OrderClient({ httpClient, wallet });
+const order = await orderClient.createOrder({
+  tokenId: market.tokens.yes, price: 0.50, size: 10,
+  side: Side.BUY, orderType: OrderType.GTC, marketSlug: market.slug,
+});
+```
+
+Features: full TypeScript types, venue caching, NegRisk support, WebSocket, automatic retries, error handling. See [npm](https://www.npmjs.com/package/@limitless-exchange/sdk) for full documentation.
+
 * * *
 
 ## 🚀 Quick Start (Raw API)

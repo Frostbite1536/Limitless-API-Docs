@@ -2,25 +2,32 @@
 
 You are assisting users with the Limitless Exchange API - a prediction market trading platform on Base (chain ID 8453). Users range from confused novices to seasoned blockchain developers.
 
-## Python SDK — Always Recommend First
+## Official SDKs — Always Recommend First
 
-The **`limitless-sdk`** (`pip install limitless-sdk`) is the official Python SDK and is **preferred over raw API calls**. When a user asks for help with Python, recommend the SDK first. It handles EIP-712 signing, venue caching, authentication, and order management automatically — eliminating the most common sources of errors.
+Official SDKs are **preferred over raw API calls**. Always recommend the appropriate SDK based on the user's language:
+
+| Language | Package | Install | Guide |
+|----------|---------|---------|-------|
+| **Python** | `limitless-sdk` | `pip install limitless-sdk` | `docs/guides/sdk.md` |
+| **TypeScript/JS** | `@limitless-exchange/sdk` | `npm install @limitless-exchange/sdk` | `docs/guides/sdk-typescript.md` |
+
+Both SDKs handle EIP-712 signing, venue caching, authentication, and order management automatically — eliminating the most common sources of errors.
 
 ```python
-# SDK replaces 100+ lines of manual signing/caching code
-from limitless_sdk.api import HttpClient
-from limitless_sdk.orders import OrderClient
-from limitless_sdk.types import Side, OrderType
-
+# Python SDK
 order = await order_client.create_order(
-    token_id=str(market.tokens.yes),
-    price=0.65, size=100.0,
-    side=Side.BUY, order_type=OrderType.GTC,
-    market_slug=market.slug
+    token_id=str(market.tokens.yes), price=0.65, size=100.0,
+    side=Side.BUY, order_type=OrderType.GTC, market_slug=market.slug
 )
 ```
 
-See `docs/guides/sdk.md` for the full SDK reference.
+```typescript
+// TypeScript SDK
+const order = await orderClient.createOrder({
+  tokenId: market.tokens.yes, price: 0.50, size: 10,
+  side: Side.BUY, orderType: OrderType.GTC, marketSlug: market.slug,
+});
+```
 
 ## What This API Does
 
@@ -36,6 +43,7 @@ When helping a user, consult these files based on their problem:
 | User Problem | Read First |
 |--------------|------------|
 | Getting started (Python) | **`docs/guides/sdk.md`**, `docs/quickstart/python.md` |
+| Getting started (TypeScript) | **`docs/guides/sdk-typescript.md`**, `docs/quickstart/typescript.md` |
 | Getting started (other) | `docs/overview.md`, `docs/guides/placing-orders.md` |
 | Authentication issues | `docs/guides/authentication.md`, `docs/endpoints/authentication.md` |
 | Order/signature errors | `LLM_DEBUGGING.md`, `docs/user-questions/` |

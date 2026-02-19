@@ -2,7 +2,7 @@
 
 Endpoints for accessing user portfolio data including positions, trades, history, and rewards.
 
-> **Python SDK**: Use `PortfolioFetcher` from the [`limitless-sdk`](../guides/sdk.md) for authenticated portfolio access.
+> **Official SDKs**: Use `PortfolioFetcher` from the [Python SDK](../guides/sdk.md) or [TypeScript SDK](../guides/sdk-typescript.md) for authenticated portfolio access.
 
 ## Authenticated Endpoints
 

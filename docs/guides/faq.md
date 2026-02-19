@@ -40,24 +40,31 @@ No. Public endpoints (markets, orderbook) don't require authentication. Order ma
 
 ---
 
-## Python SDK
+## Official SDKs
 
-### Should I use the SDK or the raw API?
+### Should I use an SDK or the raw API?
 
-**Use the SDK** (`pip install limitless-sdk`) unless you have a specific reason not to. It is the official Python SDK and the preferred approach. It handles EIP-712 signing, venue caching, authentication headers, and order construction automatically. Most signature/signing errors users encounter with the raw API simply don't happen with the SDK.
+**Use an SDK** unless you have a specific reason not to. Official SDKs are available for both Python and TypeScript:
 
-### What does the SDK handle automatically?
+| SDK | Install | Guide |
+|-----|---------|-------|
+| **Python** | `pip install limitless-sdk` | [Python SDK Guide](sdk.md) |
+| **TypeScript** | `npm install @limitless-exchange/sdk` | [TypeScript SDK Guide](sdk-typescript.md) |
 
-| Feature | SDK | Raw API |
-|---------|-----|---------|
+Both handle EIP-712 signing, venue caching, authentication headers, and order construction automatically. Most signature/signing errors users encounter with the raw API simply don't happen with the SDKs.
+
+### What do the SDKs handle automatically?
+
+| Feature | SDKs | Raw API |
+|---------|------|---------|
 | EIP-712 signing | Automatic | Manual |
 | Venue caching | Automatic | Must implement |
 | Authentication headers | Automatic | Manual |
 | Address checksumming | Automatic | Must ensure EIP-55 |
-| Retry logic | Built-in decorators | Must implement |
+| Retry logic | Built-in | Must implement |
 | WebSocket reconnect | Built-in | Manual |
-
-See the full [SDK Guide](sdk.md) for documentation.
+| Type safety (TS) | Full TypeScript types | None |
+| NegRisk support | Built-in | Manual submarket handling |
 
 ---
 

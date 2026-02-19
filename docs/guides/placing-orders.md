@@ -2,7 +2,7 @@
 
 Step-by-step guide to placing orders on the Limitless Exchange.
 
-> **Using Python?** The [`limitless-sdk`](sdk.md) handles all of this automatically — venue caching, EIP-712 signing, and order submission in a single call. See the [SDK Guide](sdk.md#placing-orders) for examples.
+> **Use an official SDK instead.** Python: [`limitless-sdk`](sdk.md). TypeScript: [`@limitless-exchange/sdk`](sdk-typescript.md). Both handle venue caching, EIP-712 signing, and order submission in a single `create_order()` / `createOrder()` call.
 
 ## Overview
 

@@ -1,6 +1,6 @@
 # Order Signature Verification Failed
 
-> **Tip**: The [`limitless-sdk`](../guides/sdk.md) handles EIP-712 signing automatically and eliminates most signature errors. Consider using it instead of manual signing: `pip install limitless-sdk`
+> **Tip**: The official SDKs handle EIP-712 signing automatically and eliminate most signature errors. Python: `pip install limitless-sdk` ([guide](../guides/sdk.md)). TypeScript: `npm install @limitless-exchange/sdk` ([guide](../guides/sdk-typescript.md)).
 
 ## Symptoms
 
