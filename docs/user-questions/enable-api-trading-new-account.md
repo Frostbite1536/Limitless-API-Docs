@@ -14,6 +14,8 @@ Having an API key is necessary but **not sufficient** for trading. You also need
 
 There is no separate "enable trading" toggle. If you have an API key and a funded wallet with approvals, you can trade immediately.
 
+> **Recommended**: Use the [`limitless-sdk`](../guides/sdk.md) (`pip install limitless-sdk`) — it handles EIP-712 signing, venue resolution, and order management automatically. See the [SDK Guide](../guides/sdk.md) for a complete quickstart.
+
 ## Checklist for New Accounts
 
 | Step | What | How |

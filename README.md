@@ -86,6 +86,7 @@ The `docs/` folder contains **AI-generated documentation** designed specifically
 
 | Task | Document |
 |------|----------|
+| **Use the Python SDK** | **[SDK Guide](docs/guides/sdk.md)** (recommended) |
 | Get started fast | [Python Quickstart](docs/quickstart/python.md) |
 | Understand the API | [Overview](docs/overview.md) |
 | Place an order | [Placing Orders Guide](docs/guides/placing-orders.md) |
@@ -125,13 +126,55 @@ A guide describing collaborative, structured methods for building software with 
 
 The Safe Vibe Coding methodology pairs well with this repository when building trading bots or integrations with the Limitless API.
 
+## Python SDK (Recommended)
+
+The **`limitless-sdk`** is the official Python SDK and the **preferred** way to interact with the Limitless API. It handles EIP-712 signing, venue caching, authentication, and order management automatically.
+
+```bash
+pip install limitless-sdk
+```
+
+```python
+import asyncio
+from eth_account import Account
+from limitless_sdk.api import HttpClient
+from limitless_sdk.markets import MarketFetcher
+from limitless_sdk.orders import OrderClient
+from limitless_sdk.types import Side, OrderType
+
+async def main():
+    http_client = HttpClient()  # Uses LIMITLESS_API_KEY env var
+    account = Account.from_key("0x...")
+
+    market_fetcher = MarketFetcher(http_client)
+    market = await market_fetcher.get_market("btc-100k-2024")
+
+    order_client = OrderClient(http_client=http_client, wallet=account)
+    order = await order_client.create_order(
+        token_id=str(market.tokens.yes),
+        price=0.65, size=100.0,
+        side=Side.BUY, order_type=OrderType.GTC,
+        market_slug=market.slug
+    )
+    print(f"Order ID: {order.order.id}")
+    await http_client.close()
+
+asyncio.run(main())
+```
+
+See the full [SDK Guide](docs/guides/sdk.md) for all features. The raw API is still available for non-Python languages or when fine-grained control is needed.
+
 ## Key API Concepts
 
 ### Venue System (Critical)
 
-Each CLOB market has dynamic contract addresses. **Never hardcode addresses** - always fetch from market data:
+Each CLOB market has dynamic contract addresses. **Never hardcode addresses** - always fetch from market data. The SDK handles this automatically via venue caching.
 
 ```python
+# SDK (automatic)
+market = await market_fetcher.get_market("btc-100k-2024")  # venue cached
+
+# Raw API (manual)
 market = get_market("btc-100k-2024")
 venue_exchange = market['venue']['exchange']  # Use for EIP-712 signing
 venue_adapter = market['venue']['adapter']    # For NegRisk SELL orders

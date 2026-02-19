@@ -118,9 +118,38 @@ If you're currently using cookie-based authentication, migrate by:
 
 * * *
 
-## 🚀 Quick Start
+## 🐍 Python SDK (Recommended)
 
-Choose your preferred programming language for complete end-to-end implementation:
+The **`limitless-sdk`** is the official Python SDK and the **preferred** way to interact with the API. It handles EIP-712 signing, venue caching, and authentication automatically.
+
+```bash
+pip install limitless-sdk
+```
+
+```python
+from limitless_sdk.api import HttpClient
+from limitless_sdk.markets import MarketFetcher
+from limitless_sdk.orders import OrderClient
+from limitless_sdk.types import Side, OrderType
+
+http_client = HttpClient()  # Uses LIMITLESS_API_KEY env var
+market_fetcher = MarketFetcher(http_client)
+market = await market_fetcher.get_market("market-slug")
+
+order_client = OrderClient(http_client=http_client, wallet=account)
+order = await order_client.create_order(
+    token_id=str(market.tokens.yes), price=0.65, size=100.0,
+    side=Side.BUY, order_type=OrderType.GTC, market_slug=market.slug
+)
+```
+
+Features: async/await, venue caching, WebSocket support, automatic retries, typed errors. See [PyPI](https://pypi.org/project/limitless-sdk/) for full documentation.
+
+* * *
+
+## 🚀 Quick Start (Raw API)
+
+For non-Python languages or when fine-grained control is needed, the REST and WebSocket APIs are available directly.
 
 ### Overview
 

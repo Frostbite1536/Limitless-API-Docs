@@ -2,6 +2,8 @@
 
 Complete guide to authenticating with the Limitless Exchange API.
 
+> **Using Python?** The [`limitless-sdk`](sdk.md) handles authentication automatically — just set the `LIMITLESS_API_KEY` environment variable and the SDK includes the header in all requests. `pip install limitless-sdk`
+
 ## Overview
 
 Limitless Exchange supports two authentication methods:

@@ -40,9 +40,43 @@ No. Public endpoints (markets, orderbook) don't require authentication. Order ma
 
 ---
 
+## Python SDK
+
+### Should I use the SDK or the raw API?
+
+**Use the SDK** (`pip install limitless-sdk`) unless you have a specific reason not to. It is the official Python SDK and the preferred approach. It handles EIP-712 signing, venue caching, authentication headers, and order construction automatically. Most signature/signing errors users encounter with the raw API simply don't happen with the SDK.
+
+### What does the SDK handle automatically?
+
+| Feature | SDK | Raw API |
+|---------|-----|---------|
+| EIP-712 signing | Automatic | Manual |
+| Venue caching | Automatic | Must implement |
+| Authentication headers | Automatic | Manual |
+| Address checksumming | Automatic | Must ensure EIP-55 |
+| Retry logic | Built-in decorators | Must implement |
+| WebSocket reconnect | Built-in | Manual |
+
+See the full [SDK Guide](sdk.md) for documentation.
+
+---
+
 ## Trading
 
 ### How do I place an order?
+
+**With the SDK (recommended)**:
+
+```python
+order = await order_client.create_order(
+    token_id=str(market.tokens.yes),
+    price=0.65, size=100.0,
+    side=Side.BUY, order_type=OrderType.GTC,
+    market_slug=market.slug
+)
+```
+
+**With the raw API**:
 
 1. Set up API key authentication
 2. Get market data to obtain position IDs

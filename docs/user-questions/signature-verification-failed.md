@@ -1,5 +1,7 @@
 # Order Signature Verification Failed
 
+> **Tip**: The [`limitless-sdk`](../guides/sdk.md) handles EIP-712 signing automatically and eliminates most signature errors. Consider using it instead of manual signing: `pip install limitless-sdk`
+
 ## Symptoms
 
 - Order submission returns signature error

@@ -2,6 +2,8 @@
 
 Endpoints for browsing, searching, and retrieving prediction market data.
 
+> **Python SDK**: Use `MarketFetcher` from the [`limitless-sdk`](../guides/sdk.md) for automatic venue caching and typed responses.
+
 ## Endpoints
 
 ### GET /markets/active

@@ -2,6 +2,8 @@
 
 Endpoints for creating and managing buy/sell orders on CLOB markets.
 
+> **Python SDK**: The [`limitless-sdk`](../guides/sdk.md) handles order signing, venue resolution, and submission automatically via `OrderClient.create_order()`. The manual process below is for non-Python languages or direct API access.
+
 ## Prerequisites
 
 Before placing orders:

@@ -2,9 +2,59 @@
 
 Complete guide to trading on Limitless Exchange using Python.
 
-## Prerequisites
+## Recommended: Use the Python SDK
 
-### Required Packages
+The **`limitless-sdk`** is the official Python SDK and the **preferred** way to interact with the Limitless API. It handles EIP-712 signing, venue caching, and authentication automatically.
+
+```bash
+pip install limitless-sdk
+```
+
+```python
+import asyncio
+import os
+from eth_account import Account
+from limitless_sdk.api import HttpClient
+from limitless_sdk.markets import MarketFetcher
+from limitless_sdk.orders import OrderClient
+from limitless_sdk.types import Side, OrderType
+
+async def main():
+    http_client = HttpClient()  # Uses LIMITLESS_API_KEY env var
+    account = Account.from_key(os.environ["PRIVATE_KEY"])
+
+    try:
+        # Fetch market (venue data cached automatically)
+        market_fetcher = MarketFetcher(http_client)
+        market = await market_fetcher.get_market("btc-100k-2024")
+
+        # Place a BUY order — signing handled automatically
+        order_client = OrderClient(http_client=http_client, wallet=account)
+        order = await order_client.create_order(
+            token_id=str(market.tokens.yes),
+            price=0.65,
+            size=100.0,
+            side=Side.BUY,
+            order_type=OrderType.GTC,
+            market_slug=market.slug
+        )
+        print(f"Order ID: {order.order.id}")
+
+    finally:
+        await http_client.close()
+
+asyncio.run(main())
+```
+
+See the full [SDK Guide](../guides/sdk.md) for all features including FOK orders, cancellation, portfolio, WebSocket, and retry handling.
+
+---
+
+## Alternative: Raw API (without SDK)
+
+If you prefer direct HTTP calls or need fine-grained control, you can use the raw API with `requests` and `eth-account`. **The SDK is still recommended** as it eliminates common pitfalls (incorrect signing, missing venue data, checksum errors).
+
+### Prerequisites
 
 ```bash
 pip install requests eth-account web3
@@ -19,7 +69,7 @@ export PRIVATE_KEY="0x..."           # Your wallet private key (for order signin
 
 **Security Warning**: Never commit API keys or private keys to version control.
 
-## Complete Trading Example
+## Raw API Trading Example
 
 ### 1. Authentication
 

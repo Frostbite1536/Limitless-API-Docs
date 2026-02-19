@@ -4,6 +4,8 @@
 
 The Limitless Exchange API provides programmatic access to a decentralized prediction market platform built on the Base blockchain (Chain ID: 8453). The API enables trading, portfolio management, and real-time market data access.
 
+> **Python developers**: The [`limitless-sdk`](guides/sdk.md) (`pip install limitless-sdk`) is the preferred way to interact with this API. It handles authentication, EIP-712 signing, and venue caching automatically.
+
 ## Base URL
 
 ```

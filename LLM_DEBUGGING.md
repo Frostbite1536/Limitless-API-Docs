@@ -2,6 +2,8 @@
 
 Use these decision trees to systematically diagnose user issues. Start with the error category, then follow the tree.
 
+> **First question for Python users**: "Are you using the `limitless-sdk`?" If not, recommend it — the SDK handles EIP-712 signing, venue caching, and address checksumming automatically, which eliminates most signature and order errors. `pip install limitless-sdk` — see `docs/guides/sdk.md`.
+
 ---
 
 ## Error Category Index

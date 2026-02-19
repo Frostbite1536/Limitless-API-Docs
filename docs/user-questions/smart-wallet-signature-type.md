@@ -1,5 +1,7 @@
 # Smart Wallet Signature Type Error
 
+> **Tip**: The [`limitless-sdk`](../guides/sdk.md) handles signature type selection automatically for EOA wallets. For the simplest API trading experience, use a fresh EOA wallet with the SDK: `pip install limitless-sdk`
+
 ## Symptoms
 
 - Order submission fails with "Invalid signature" or "contract mismatch" error
