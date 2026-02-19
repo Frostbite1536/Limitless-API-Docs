@@ -180,7 +180,7 @@ Yes, two options:
 
 ### Does `mergePositions` work with embedded / smart wallets (Safe)?
 
-Yes. `mergePositions` is a function on the CTF contract and does not care about the wallet type. The only requirement is that the **calling wallet holds the tokens**. If your positions are in a Gnosis Safe (which happens when you use the Limitless frontend), you must execute the merge as a Safe transaction, signed by the embedded account. If your positions are in a plain EOA (API-only trading), call the contract directly. See the [Claiming Rewards After Close](../user-questions/claim-rewards-after-close.md#does-mergepositions-work-with-embedded--smart-wallets-safe) guide for full details.
+`mergePositions` is a function on the CTF contract and works regardless of wallet type — the requirement is that the **calling wallet holds the tokens**. However, if your positions are in a Gnosis Safe (which happens when you use the Limitless frontend), you **cannot** call `mergePositions` programmatically because Limitless does not allow export of the Privy-managed embedded wallet key. Use the Limitless web interface for Safe-held positions, or trade via a fresh EOA you control for programmatic merge/redeem access. See the [Claiming Rewards After Close](../user-questions/claim-rewards-after-close.md#does-mergepositions-work-with-embedded--smart-wallets-safe) guide for full details.
 
 ---
 
