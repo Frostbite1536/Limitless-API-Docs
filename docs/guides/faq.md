@@ -273,7 +273,9 @@ Cache venue data per market - it's static and doesn't change.
 
 ### What collateral is used?
 
-USDC with 6 decimals. 1 USDC = 1,000,000 raw units.
+**Native USDC** on Base: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` (6 decimals, 1 USDC = 1,000,000 raw units).
+
+Limitless does **not** use USDbC (the old bridged USDC.e at `0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA`). There is no deposit system — USDC stays in your wallet and the exchange pulls it via standard ERC-20 `approve` / `transferFrom`. See [Enabling API Trading](../user-questions/enable-api-trading-new-account.md#common-misconceptions-about-allowances) for full details.
 
 ### How do I handle large numbers?
 

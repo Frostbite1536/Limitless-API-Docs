@@ -17,7 +17,7 @@ Real questions and issues from developers using the Limitless Exchange API.
 | [Portfolio History and Wallet Types](portfolio-history-wallet-types.md) | Does `/portfolio/history` work with smart wallets or only EOA wallets? |
 | [Smart Wallet Signer Mismatch](smart-wallet-signer-mismatch.md) | "Signer does not match with correct address" error |
 | [Smart Wallet Signature Type](smart-wallet-signature-type.md) | Signature errors when using smart wallet with wrong signatureType |
-| [Enable API Trading on New Account](enable-api-trading-new-account.md) | New account/address can't trade via API — setup checklist and working Python EIP-712 example |
+| [Enable API Trading on New Account](enable-api-trading-new-account.md) | New account/address can't trade via API — setup checklist, USDC allowance guide, common misconceptions, and working Python EIP-712 example |
 | [Signature Verification Failed](signature-verification-failed.md) | Order signature errors and debugging |
 | [Order Not Filling](order-not-filling.md) | Order accepted but no trade executes |
 | [Invalid Token ID](invalid-token-id.md) | Token ID or position not found errors |
@@ -27,6 +27,10 @@ Real questions and issues from developers using the Limitless Exchange API.
 ### New account can't trade via API?
 
 Follow the [Enable API Trading on New Account](enable-api-trading-new-account.md) checklist — you likely need USDC on Base, token approvals, and correct EIP-712 signing.
+
+### USDC allowance / approval not working?
+
+Your USDC address is probably wrong. The correct USDC on Base is `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`. There is no "deposit" or "collateral/allowance" endpoint — it's a standard ERC-20 `approve()`. See the [Common Misconceptions](enable-api-trading-new-account.md#common-misconceptions-about-allowances) section.
 
 ### Getting a 400 error?
 
