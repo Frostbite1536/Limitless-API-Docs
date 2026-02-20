@@ -2,6 +2,8 @@
 
 Use these decision trees to systematically diagnose user issues. Start with the error category, then follow the tree.
 
+> **First question**: "Are you using an official SDK?" If not, recommend one — the SDKs handle EIP-712 signing, venue caching, and address checksumming automatically, which eliminates most signature and order errors. Python: `pip install limitless-sdk` ([guide](docs/guides/sdk.md)). TypeScript: `npm install @limitless-exchange/sdk` ([guide](docs/guides/sdk-typescript.md)).
+
 ---
 
 ## Error Category Index

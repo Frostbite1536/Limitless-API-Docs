@@ -150,7 +150,7 @@ await tx.wait();
 
 ### Does `mergePositions` Work with Embedded / Smart Wallets (Safe)?
 
-**Yes.** Both `mergePositions` and `redeemPositions` are functions on the CTF contract — they don't care about wallet type. The only requirement is that the **calling wallet holds the tokens**.
+Both `mergePositions` and `redeemPositions` are functions on the CTF contract — they accept calls from any wallet type. The requirement is that the **calling wallet holds the tokens** and the transaction is **signed by an authorized key** (the wallet's own key, or the Safe owner's key).
 
 When using the Limitless frontend, the platform creates:
 
@@ -159,41 +159,22 @@ When using the Limitless frontend, the platform creates:
 | **Embedded account** (`embeddedAccount`) | Privy EOA, stored in the browser/enclave | **Signer** — signs transactions |
 | **Smart wallet** (`smartWallet`) | Gnosis Safe contract on Base | **Position holder** — holds outcome tokens and USDC |
 
-Your **positions live in the Safe**, not in the embedded account. So:
+Your **positions live in the Safe**, not in the embedded account. The Safe must be the caller of `mergePositions` / `redeemPositions`, which requires a transaction signed by the embedded account (the Safe's owner).
 
-- The **Safe** must be the caller of `mergePositions` / `redeemPositions`
-- You execute this as a Safe transaction, signed by the embedded account (the Safe's owner)
-- Use a Safe SDK (`@safe-global/protocol-kit` or `safe-eth-py`) to build and execute Safe transactions
+**However, Limitless does not allow export of the Privy-managed embedded wallet private key.** This means you **cannot** programmatically call `mergePositions` through the Safe from your own scripts — the key never leaves the Privy enclave.
 
-"Base vs Safe" is **not** an either/or — the Safe *is* deployed on Base. The real distinction is:
+#### What this means in practice
 
-| Wallet Setup | Who Calls the Contract | How |
-|-------------|----------------------|-----|
-| **Plain EOA** (API-only trading, `signatureType: 0`) | The EOA directly | Standard `send_raw_transaction` |
-| **Safe / embedded wallet** (Limitless frontend) | The Safe contract | Safe transaction signed by embedded account |
+| Scenario | Can you `mergePositions`? | How |
+|----------|--------------------------|-----|
+| **Positions in Safe** (used Limitless frontend) | **Not programmatically** — use the Limitless web interface, which has access to the Privy signer | Via the frontend UI |
+| **Positions in your own EOA** (API-only trading, `signatureType: 0`, fresh wallet) | **Yes** — call the contract directly with your own private key | See code example below |
 
-#### Merging via a Safe (Python pseudocode)
+> **Recommendation**: If you need programmatic access to merge/redeem, trade via a **fresh EOA wallet** that you control (not linked to the Limitless frontend). Positions will be held directly in your EOA, and you can call the CTF contract without needing the Privy key.
 
-```python
-# 1. Build the mergePositions calldata
-calldata = ctf.functions.mergePositions(
-    USDC_ADDRESS,
-    b'\x00' * 32,       # parentCollectionId
-    condition_id,
-    [1, 2],              # both outcomes
-    merge_amount
-).build_transaction({'from': safe_address})['data']
+"Base vs Safe" is **not** an either/or — the Safe *is* deployed on Base. The real distinction is whether you control the signing key.
 
-# 2. Execute through the Safe (using safe-eth-py or protocol-kit)
-from safe_eth.safe import Safe
-
-safe = Safe(safe_address, ethereum_client)
-safe_tx = safe.build_multisig_tx(to=CTF_ADDRESS, value=0, data=calldata)
-safe_tx.sign(embedded_account_private_key)
-tx_hash, _ = safe_tx.execute(embedded_account_private_key)
-```
-
-#### Merging via plain EOA
+#### Merging via plain EOA (programmatic)
 
 ```python
 tx = ctf.functions.mergePositions(

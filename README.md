@@ -86,6 +86,8 @@ The `docs/` folder contains **AI-generated documentation** designed specifically
 
 | Task | Document |
 |------|----------|
+| **Use the Python SDK** | **[Python SDK Guide](docs/guides/sdk.md)** (recommended) |
+| **Use the TypeScript SDK** | **[TypeScript SDK Guide](docs/guides/sdk-typescript.md)** (recommended) |
 | Get started fast | [Python Quickstart](docs/quickstart/python.md) |
 | Understand the API | [Overview](docs/overview.md) |
 | Place an order | [Placing Orders Guide](docs/guides/placing-orders.md) |
@@ -125,13 +127,46 @@ A guide describing collaborative, structured methods for building software with 
 
 The Safe Vibe Coding methodology pairs well with this repository when building trading bots or integrations with the Limitless API.
 
+## Official SDKs (Recommended)
+
+Official SDKs are the **preferred** way to interact with the Limitless API. They handle EIP-712 signing, venue caching, authentication, and order management automatically.
+
+| SDK | Install | Guide |
+|-----|---------|-------|
+| **Python** | `pip install limitless-sdk` | [Python SDK Guide](docs/guides/sdk.md) |
+| **TypeScript** | `npm install @limitless-exchange/sdk` | [TypeScript SDK Guide](docs/guides/sdk-typescript.md) |
+
+```python
+# Python
+from limitless_sdk.orders import OrderClient
+order = await order_client.create_order(
+    token_id=str(market.tokens.yes), price=0.65, size=100.0,
+    side=Side.BUY, order_type=OrderType.GTC, market_slug=market.slug
+)
+```
+
+```typescript
+// TypeScript
+import { OrderClient, Side, OrderType } from '@limitless-exchange/sdk';
+const order = await orderClient.createOrder({
+  tokenId: market.tokens.yes, price: 0.50, size: 10,
+  side: Side.BUY, orderType: OrderType.GTC, marketSlug: market.slug,
+});
+```
+
+The raw API is still available when fine-grained control is needed.
+
 ## Key API Concepts
 
 ### Venue System (Critical)
 
-Each CLOB market has dynamic contract addresses. **Never hardcode addresses** - always fetch from market data:
+Each CLOB market has dynamic contract addresses. **Never hardcode addresses** - always fetch from market data. The SDK handles this automatically via venue caching.
 
 ```python
+# SDK (automatic)
+market = await market_fetcher.get_market("btc-100k-2024")  # venue cached
+
+# Raw API (manual)
 market = get_market("btc-100k-2024")
 venue_exchange = market['venue']['exchange']  # Use for EIP-712 signing
 venue_adapter = market['venue']['adapter']    # For NegRisk SELL orders

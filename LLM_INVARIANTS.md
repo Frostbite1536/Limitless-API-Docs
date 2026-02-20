@@ -2,6 +2,8 @@
 
 These are the critical rules for the Limitless Exchange API. If any of these are violated, operations will fail. When debugging user issues, verify these first.
 
+> **Note**: The official SDKs handle invariants 1, 4, 5, 6, 7, 8, and 9 automatically. If a user is hitting these issues, recommend the appropriate SDK first: Python [`limitless-sdk`](docs/guides/sdk.md), TypeScript [`@limitless-exchange/sdk`](docs/guides/sdk-typescript.md).
+
 ---
 
 ## 0. API Key Authentication Required

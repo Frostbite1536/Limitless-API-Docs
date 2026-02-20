@@ -2,6 +2,8 @@
 
 Step-by-step guide to placing orders on the Limitless Exchange.
 
+> **Use an official SDK instead.** Python: [`limitless-sdk`](sdk.md). TypeScript: [`@limitless-exchange/sdk`](sdk-typescript.md). Both handle venue caching, EIP-712 signing, and order submission in a single `create_order()` / `createOrder()` call.
+
 ## Overview
 
 Placing an order on Limitless Exchange requires:
@@ -11,6 +13,8 @@ Placing an order on Limitless Exchange requires:
 3. **Amount Calculation** - Calculate maker/taker amounts
 4. **Order Signing** - Sign order with EIP-712
 5. **Submission** - Submit to the API
+
+The SDK reduces this to a single `create_order()` call. The manual steps below are for non-Python languages or when you need direct API access.
 
 ## Step 1: Authentication
 

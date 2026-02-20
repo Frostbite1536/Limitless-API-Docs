@@ -14,6 +14,8 @@ Having an API key is necessary but **not sufficient** for trading. You also need
 
 There is no separate "enable trading" toggle. If you have an API key and a funded wallet with approvals, you can trade immediately.
 
+> **Recommended**: Use an official SDK — it handles EIP-712 signing, venue resolution, and order management automatically. Python: [`limitless-sdk`](../guides/sdk.md) (`pip install limitless-sdk`). TypeScript: [`@limitless-exchange/sdk`](../guides/sdk-typescript.md) (`npm install @limitless-exchange/sdk`).
+
 ## Checklist for New Accounts
 
 | Step | What | How |
@@ -91,6 +93,99 @@ def approve_usdc(private_key, spender_address, amount=2**256 - 1):
     print(f"USDC approval tx: {tx_hash.hex()} (status: {receipt['status']})")
     return receipt
 ```
+
+### Getting the Spender Address (venue.exchange)
+
+The `spender_address` for the approval **must** come from the market's venue data — do NOT hardcode it:
+
+```python
+import requests
+
+# Fetch the market you want to trade on
+market = requests.get("https://api.limitless.exchange/markets/your-market-slug").json()
+
+# This is the address you approve USDC to
+spender = market["venue"]["exchange"]
+print(f"Approve USDC to: {spender}")
+
+# Now run the approval
+approve_usdc(private_key, spender)
+```
+
+Different markets may use different venue versions (v1, v2, v3), each with a different exchange address. Always fetch it from the API.
+
+### Common Misconceptions About Allowances
+
+Several misconceptions come up frequently when setting up allowances for the first time:
+
+#### "I need to deposit USDC into Limitless"
+
+**Wrong.** Limitless does **not** have a deposit/withdrawal system or a "trading balance." There is no `collateral/allowance` API endpoint and no deposit flow. It works like any DEX:
+
+1. USDC stays in **your wallet** on Base
+2. You call `approve(venue.exchange, amount)` on the USDC contract — this gives the exchange permission to pull USDC when your order fills
+3. When a trade matches, the exchange contract transfers USDC directly from your wallet via `transferFrom`
+
+That's it. No deposits, no custody, no vault.
+
+#### "My `eth_call` to USDC returns empty — is it the wrong token?"
+
+If `eth_call` returns empty bytes, you are calling the **wrong address**. The correct USDC on Base is:
+
+```
+0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+```
+
+Common wrong addresses:
+
+| Address | What It Is | Why It's Wrong |
+|---------|-----------|----------------|
+| `0x8335...f07f` (or similar prefix, wrong suffix) | Doesn't exist | Typo — the real USDC starts with `0x8335` but ends with `2913` |
+| `0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA` | USDbC (bridged) | This is the old bridged USDC.e — Limitless uses **native USDC**, not USDbC |
+
+If your RPC returns empty for an `eth_call`, it means there is no contract deployed at that address. Double-check the address character by character.
+
+#### "The venue address `0x05c748...fa5` is the only exchange"
+
+`0x05c748E2f4DcDe0ec9Fa8DDc40DE6b867f923fa5` is the **v3 Simple CLOB** exchange. Other markets may use v1 or v2, or NegRisk exchanges. You must approve USDC to the specific venue your target market uses. Always fetch it from `GET /markets/{slug}` → `venue.exchange`.
+
+#### Quick Verification Script
+
+After approving, verify your allowance is set:
+
+```python
+from web3 import Web3
+
+w3 = Web3(Web3.HTTPProvider("https://mainnet.base.org"))
+
+USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+ALLOWANCE_ABI = [
+    {
+        "name": "allowance",
+        "type": "function",
+        "inputs": [
+            {"name": "owner", "type": "address"},
+            {"name": "spender", "type": "address"}
+        ],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view"
+    }
+]
+
+usdc = w3.eth.contract(address=USDC_ADDRESS, abi=ALLOWANCE_ABI)
+
+def check_allowance(wallet_address, spender_address):
+    allowance = usdc.functions.allowance(
+        Web3.to_checksum_address(wallet_address),
+        Web3.to_checksum_address(spender_address)
+    ).call()
+    print(f"Allowance: {allowance / 1e6:.2f} USDC")
+    return allowance
+
+# Usage: check_allowance("0xYourWallet...", venue_exchange_address)
+```
+
+If `allowance()` also returns empty or reverts, you have the wrong USDC address. If it returns `0`, you need to run the approval.
 
 ## Complete Working Python Example
 

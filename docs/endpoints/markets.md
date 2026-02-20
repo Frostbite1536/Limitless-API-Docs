@@ -2,6 +2,8 @@
 
 Endpoints for browsing, searching, and retrieving prediction market data.
 
+> **Official SDKs**: Use `MarketFetcher` from the [Python SDK](../guides/sdk.md) or [TypeScript SDK](../guides/sdk-typescript.md) for automatic venue caching and typed responses.
+
 ## Endpoints
 
 ### GET /markets/active

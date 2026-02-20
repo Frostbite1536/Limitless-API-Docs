@@ -2,6 +2,8 @@
 
 Endpoints for creating and managing buy/sell orders on CLOB markets.
 
+> **Official SDKs handle this automatically.** Python: [`limitless-sdk`](../guides/sdk.md) via `OrderClient.create_order()`. TypeScript: [`@limitless-exchange/sdk`](../guides/sdk-typescript.md) via `OrderClient.createOrder()`. The manual process below is for direct API access.
+
 ## Prerequisites
 
 Before placing orders:

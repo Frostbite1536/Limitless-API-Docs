@@ -40,9 +40,50 @@ No. Public endpoints (markets, orderbook) don't require authentication. Order ma
 
 ---
 
+## Official SDKs
+
+### Should I use an SDK or the raw API?
+
+**Use an SDK** unless you have a specific reason not to. Official SDKs are available for both Python and TypeScript:
+
+| SDK | Install | Guide |
+|-----|---------|-------|
+| **Python** | `pip install limitless-sdk` | [Python SDK Guide](sdk.md) |
+| **TypeScript** | `npm install @limitless-exchange/sdk` | [TypeScript SDK Guide](sdk-typescript.md) |
+
+Both handle EIP-712 signing, venue caching, authentication headers, and order construction automatically. Most signature/signing errors users encounter with the raw API simply don't happen with the SDKs.
+
+### What do the SDKs handle automatically?
+
+| Feature | SDKs | Raw API |
+|---------|------|---------|
+| EIP-712 signing | Automatic | Manual |
+| Venue caching | Automatic | Must implement |
+| Authentication headers | Automatic | Manual |
+| Address checksumming | Automatic | Must ensure EIP-55 |
+| Retry logic | Built-in | Must implement |
+| WebSocket reconnect | Built-in | Manual |
+| Type safety (TS) | Full TypeScript types | None |
+| NegRisk support | Built-in | Manual submarket handling |
+
+---
+
 ## Trading
 
 ### How do I place an order?
+
+**With the SDK (recommended)**:
+
+```python
+order = await order_client.create_order(
+    token_id=str(market.tokens.yes),
+    price=0.65, size=100.0,
+    side=Side.BUY, order_type=OrderType.GTC,
+    market_slug=market.slug
+)
+```
+
+**With the raw API**:
 
 1. Set up API key authentication
 2. Get market data to obtain position IDs
@@ -180,7 +221,7 @@ Yes, two options:
 
 ### Does `mergePositions` work with embedded / smart wallets (Safe)?
 
-Yes. `mergePositions` is a function on the CTF contract and does not care about the wallet type. The only requirement is that the **calling wallet holds the tokens**. If your positions are in a Gnosis Safe (which happens when you use the Limitless frontend), you must execute the merge as a Safe transaction, signed by the embedded account. If your positions are in a plain EOA (API-only trading), call the contract directly. See the [Claiming Rewards After Close](../user-questions/claim-rewards-after-close.md#does-mergepositions-work-with-embedded--smart-wallets-safe) guide for full details.
+`mergePositions` is a function on the CTF contract and works regardless of wallet type — the requirement is that the **calling wallet holds the tokens**. However, if your positions are in a Gnosis Safe (which happens when you use the Limitless frontend), you **cannot** call `mergePositions` programmatically because Limitless does not allow export of the Privy-managed embedded wallet key. Use the Limitless web interface for Safe-held positions, or trade via a fresh EOA you control for programmatic merge/redeem access. See the [Claiming Rewards After Close](../user-questions/claim-rewards-after-close.md#does-mergepositions-work-with-embedded--smart-wallets-safe) guide for full details.
 
 ---
 
@@ -232,7 +273,9 @@ Cache venue data per market - it's static and doesn't change.
 
 ### What collateral is used?
 
-USDC with 6 decimals. 1 USDC = 1,000,000 raw units.
+**Native USDC** on Base: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` (6 decimals, 1 USDC = 1,000,000 raw units).
+
+Limitless does **not** use USDbC (the old bridged USDC.e at `0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA`). There is no deposit system — USDC stays in your wallet and the exchange pulls it via standard ERC-20 `approve` / `transferFrom`. See [Enabling API Trading](../user-questions/enable-api-trading-new-account.md#common-misconceptions-about-allowances) for full details.
 
 ### How do I handle large numbers?
 

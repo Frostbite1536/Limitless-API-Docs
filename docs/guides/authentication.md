@@ -2,6 +2,8 @@
 
 Complete guide to authenticating with the Limitless Exchange API.
 
+> **Use an official SDK?** Both the [Python SDK](sdk.md) (`pip install limitless-sdk`) and [TypeScript SDK](sdk-typescript.md) (`npm install @limitless-exchange/sdk`) handle authentication automatically — just set the `LIMITLESS_API_KEY` environment variable.
+
 ## Overview
 
 Limitless Exchange supports two authentication methods:
