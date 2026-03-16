@@ -100,6 +100,8 @@ See [Python Quickstart](../quickstart/python.md) for complete example.
 | GTC | Good Till Cancelled | Stays open until filled or cancelled |
 | FOK | Fill Or Kill | Must fill completely immediately or fails |
 
+**Important**: FOK orders on Limitless are **USD-denominated**. The "fill or kill" applies to the dollar amount (`makerAmount`), not to a specific number of contracts. You specify how much USDC to spend, and the system fills as many contracts as that amount can buy. This differs from platforms like Polymarket where FOK guarantees a specific contract quantity. See [FOK Orders: USD vs Contracts](../user-questions/fok-order-usd-vs-contracts.md) for details.
+
 ### How do I calculate the order price?
 
 ```python
