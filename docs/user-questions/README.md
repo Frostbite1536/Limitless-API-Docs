@@ -19,6 +19,7 @@ Real questions and issues from developers using the Limitless Exchange API.
 | [Smart Wallet Signature Type](smart-wallet-signature-type.md) | Signature errors when using smart wallet with wrong signatureType |
 | [Enable API Trading on New Account](enable-api-trading-new-account.md) | New account/address can't trade via API — setup checklist, USDC allowance guide, common misconceptions, and working Python EIP-712 example |
 | [Signature Verification Failed](signature-verification-failed.md) | Order signature errors and debugging |
+| [FOK Orders: USD vs Contracts](fok-order-usd-vs-contracts.md) | FOK orders are USD-denominated, not contract-denominated — how this differs from other platforms |
 | [Order Not Filling](order-not-filling.md) | Order accepted but no trade executes |
 | [Invalid Token ID](invalid-token-id.md) | Token ID or position not found errors |
 
